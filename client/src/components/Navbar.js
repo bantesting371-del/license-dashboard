@@ -34,13 +34,13 @@ export default function Navbar() {
             <span style={{ color: '#34d399', marginLeft: '10px', fontWeight: 'bold', background: 'rgba(52, 211, 153, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
               ${user.credits?.toFixed(2)}
             </span>
-            <button onClick={handleLogout} className="btn btn-danger" style={{ padding: '6px 14px', fontSize: '13px' }}>
+            <button onClick={handleLogout} className="btn btn-danger" style={{ padding: '8px 16px', fontSize: '13px' }}>
               Logout
             </button>
           </>
         ) : (
           <>
-            <Link to="/login" className="btn" style={{ background: 'transparent', border: '1px solid #334155', color: '#fff' }}>Login</Link>
+            <Link to="/login" className="btn" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>Login</Link>
             <Link to="/register" className="btn btn-primary">Register</Link>
           </>
         )}
