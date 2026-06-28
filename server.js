@@ -9,8 +9,47 @@ const crypto = require('crypto');
 const axios = require('axios');
 
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+
+// ==================== SECURITY HEADERS ====================
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'"
+  );
+  next();
+});
+
+// CORS — restrict in production via ALLOWED_ORIGIN env var
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || true,
+  credentials: false,
+  optionsSuccessStatus: 200,
+}));
+
+app.use(express.json({ limit: '512kb' }));
+
+// ==================== RATE LIMITING ====================
+const rateMap = new Map();
+setInterval(() => rateMap.clear(), 60000); // GC every minute
+
+const rateLimit = (maxReqs, windowMs) => (req, res, next) => {
+  const key = (req.ip || 'unknown') + ':' + req.path;
+  const now = Date.now();
+  const entry = rateMap.get(key) || { count: 0, start: now };
+  if (now - entry.start > windowMs) { entry.count = 1; entry.start = now; }
+  else entry.count++;
+  rateMap.set(key, entry);
+  if (entry.count > maxReqs) {
+    res.setHeader('Retry-After', Math.ceil(windowMs / 1000));
+    return res.status(429).json({ error: 'Too many requests. Please wait before trying again.' });
+  }
+  next();
+};
 
 // ==================== DATABASE ====================
 const db = createClient({
@@ -139,7 +178,7 @@ async function initDatabase() {
 
     if (ADMIN_USERNAME && ADMIN_PASSWORD) {
       const existing = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [ADMIN_USERNAME] });
-      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 12);
       
       if (existing.rows.length === 0) {
         await db.execute({
@@ -219,23 +258,33 @@ async function verifyBinanceDeposit(txId, expectedAmount) {
 
 // ==================== AUTH ROUTES ====================
 
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', rateLimit(5, 60000), async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-    const existing = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
+    const u = String(username).trim().slice(0, 64);
+    const p = String(password).slice(0, 128);
+
+    if (!/^[a-zA-Z0-9_-]{3,32}$/.test(u)) {
+      return res.status(400).json({ error: 'Username must be 3–32 characters (letters, numbers, _ or -)' });
+    }
+    if (p.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const existing = await db.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [u] });
     if (existing.rows.length > 0) return res.status(400).json({ error: 'Username already exists' });
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(p, 12);
     await db.execute({
       sql: 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-      args: [username, hashed, 'user']
+      args: [u, hashed, 'user']
     });
 
     res.json({ message: 'User created successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -244,37 +293,59 @@ app.post('/api/auth/register', authenticate, requireAdmin, async (req, res) => {
     const { username, password, role } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-    const existing = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
+    const u = String(username).trim().slice(0, 64);
+    const p = String(password).slice(0, 128);
+
+    if (!/^[a-zA-Z0-9_-]{3,32}$/.test(u)) {
+      return res.status(400).json({ error: 'Username must be 3–32 characters (letters, numbers, _ or -)' });
+    }
+    if (p.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const allowedRoles = ['user', 'reseller', 'admin'];
+    const safeRole = allowedRoles.includes(role) ? role : 'user';
+
+    const existing = await db.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [u] });
     if (existing.rows.length > 0) return res.status(400).json({ error: 'Username already exists' });
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(p, 12);
     await db.execute({
       sql: 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-      args: [username, hashed, role || 'user']
+      args: [u, hashed, safeRole]
     });
 
-    res.json({ message: 'User created successfully', username, role: role || 'user' });
+    res.json({ message: 'User created successfully', username: u, role: safeRole });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', rateLimit(10, 60000), async (req, res) => {
   try {
     const { username, password } = req.body;
-    const result = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
-    if (result.rows.length === 0) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!username || !password) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const u = String(username).trim().slice(0, 64);
+    const p = String(password).slice(0, 128);
+
+    const result = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [u] });
+    if (result.rows.length === 0) {
+      // Constant-time response to prevent username enumeration
+      await bcrypt.hash('dummy', 12);
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
 
     const user = result.rows[0];
-    if (user.is_banned) return res.status(403).json({ error: 'Account banned' });
-
-    const valid = await bcrypt.compare(password, user.password);
+    const valid = await bcrypt.compare(p, user.password);
     if (!valid) return res.status(400).json({ error: 'Invalid credentials' });
+
+    if (user.is_banned) return res.status(403).json({ error: 'Account suspended. Contact support.' });
 
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '7d', algorithm: 'HS256' }
     );
 
     res.json({
@@ -282,7 +353,7 @@ app.post('/api/auth/login', async (req, res) => {
       user: { id: user.id, username: user.username, role: user.role, credits: user.credits, total_recharged: user.total_recharged }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
@@ -600,19 +671,25 @@ app.post('/api/payments/create', authenticate, async (req, res) => {
 });
 
 // VERIFY TXID WITH BINANCE API
-app.post('/api/payments/verify', authenticate, async (req, res) => {
+app.post('/api/payments/verify', rateLimit(20, 60000), authenticate, async (req, res) => {
   try {
     const { orderId, txId } = req.body;
     if (!orderId || !txId) return res.status(400).json({ error: 'Order ID and Transaction ID required' });
 
+    // Validate TXID format to prevent injection / garbage input
+    const cleanTxId = String(txId).trim();
+    if (!/^[a-fA-F0-9]{20,80}$/.test(cleanTxId)) {
+      return res.status(400).json({ error: 'Invalid Transaction ID format. Copy it directly from Binance.' });
+    }
+
     // Check if txId already used
     const existing = await db.execute({
       sql: 'SELECT * FROM payments WHERE tx_id = ? AND status = ?',
-      args: [txId, 'completed']
+      args: [cleanTxId, 'completed']
     });
     if (existing.rows.length > 0) {
       return res.status(400).json({ 
-        error: '⚠️ DUPLICATE TRANSACTION', 
+        error: 'DUPLICATE TRANSACTION', 
         message: 'This Transaction ID has already been used. Each transaction can only be used once.' 
       });
     }
@@ -627,7 +704,7 @@ app.post('/api/payments/verify', authenticate, async (req, res) => {
 
     // Verify with Binance API
     const expectedAmount = payment.rows[0].amount;
-    const verification = await verifyBinanceDeposit(txId, expectedAmount);
+    const verification = await verifyBinanceDeposit(cleanTxId, expectedAmount);
 
     if (!verification.valid) {
       return res.status(400).json({ error: verification.message });
@@ -637,7 +714,7 @@ app.post('/api/payments/verify', authenticate, async (req, res) => {
     const credits = parseFloat(verification.amount);
     await db.execute({
       sql: 'UPDATE payments SET status = ?, tx_id = ?, credits_added = ?, approved_date = datetime("now") WHERE order_id = ?',
-      args: ['completed', txId, credits, orderId]
+      args: ['completed', cleanTxId, credits, orderId]
     });
     await db.execute({
       sql: 'UPDATE users SET credits = credits + ?, total_recharged = total_recharged + ? WHERE username = ?',
@@ -787,20 +864,8 @@ app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// Seed first admin
-app.post('/api/seed-admin', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const hashed = await bcrypt.hash(password, 10);
-    await db.execute({
-      sql: 'INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)',
-      args: [username, hashed, 'admin']
-    });
-    res.json({ message: 'Admin created. Remove this route in production!' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// NOTE: /api/seed-admin has been removed for security.
+// Admin users are provisioned via ADMIN_USERNAME / ADMIN_PASSWORD environment variables only.
 
 // ==================== SERVE REACT FRONTEND ====================
 app.use(express.static(path.join(__dirname, 'client/build')));
