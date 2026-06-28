@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Simple length sanitiser
+const sanitise = (str, max = 64) => String(str ?? '').trim().slice(0, max);
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -12,42 +15,89 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const u = sanitise(username);
+    const p = password.slice(0, 128);
+    if (!u || !p) { setError('Both fields are required.'); return; }
+
     setLoading(true);
     setError('');
     try {
-      await login(username, password);
+      await login(u, p);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || 'Incorrect username or password.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '420px', margin: '80px auto', padding: '0 16px' }}>
+    <div style={{ maxWidth: 420, margin: '60px auto', padding: '0 4px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{
+          width: 52, height: 52, background: 'linear-gradient(135deg, var(--brand), var(--brand-dark))',
+          borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 24, margin: '0 auto 16px'
+        }}>🔐</div>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.03em' }}>Welcome back</h1>
+        <p style={{ marginTop: 6, fontSize: 14 }}>Sign in to manage your licenses</p>
+      </div>
+
       <div className="card">
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#fff', letterSpacing: '-0.02em' }}>Welcome Back</h2>
-          <p style={{ color: '#a1a1aa', marginTop: '8px' }}>Sign in to your account to continue</p>
-        </div>
-        {error && <div className="alert alert-danger">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#e4e4e7', fontSize: '14px', fontWeight: '600' }}>Username</label>
-            <input type="text" placeholder="Enter your username" className="input" value={username} onChange={(e) => setUsername(e.target.value)} required />
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            <span aria-hidden="true">⚠️</span> {error}
           </div>
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#e4e4e7', fontSize: '14px', fontWeight: '600' }}>Password</label>
-            <input type="password" placeholder="Enter your password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        )}
+        <form onSubmit={handleSubmit} noValidate autoComplete="on">
+          <div className="form-group">
+            <label className="form-label" htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              className="input"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck="false"
+              maxLength={64}
+              required
+              aria-required="true"
+            />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '16px', fontWeight: '700' }} disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              className="input"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              maxLength={128}
+              required
+              aria-required="true"
+            />
+          </div>
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg btn-block"
+            disabled={loading}
+            aria-busy={loading}
+          >
+            {loading ? <><span className="spinner spinner-sm" aria-hidden="true" /> Signing in…</> : 'Sign In'}
           </button>
         </form>
-        <div style={{ marginTop: '32px', textAlign: 'center', fontSize: '14px', color: '#a1a1aa', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '24px' }}>
-          Don't have an account? <Link to="/register" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600', marginLeft: '6px' }}>Create an account</Link>
-        </div>
+
+        <div className="divider" />
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+          Don't have an account?{' '}
+          <Link to="/register" style={{ color: 'var(--brand-light)', fontWeight: 600 }}>Create one</Link>
+        </p>
       </div>
     </div>
   );
