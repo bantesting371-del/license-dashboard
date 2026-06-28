@@ -1,0 +1,32 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+.btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+.btn:hover { opacity: 0.9; }
+.btn-primary { background: #3b82f6; color: white; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-success { background: #10b981; color: white; }
+.btn-warning { background: #f59e0b; color: #0f172a; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.input { width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: white; margin-bottom: 12px; font-size: 14px; }
+.input:focus { outline: none; border-color: #3b82f6; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.navbar { background: #1e293b; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+.nav-links a { color: #94a3b8; text-decoration: none; margin-left: 20px; font-size: 14px; }
+.nav-links a:hover { color: white; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+.table th { color: #94a3b8; font-weight: 600; font-size: 13px; text-transform: uppercase; }
+.badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-success { background: #064e3b; color: #34d399; }
+.badge-pending { background: #78350f; color: #fbbf24; }
+.badge-danger { background: #7f1d1d; color: #f87171; }
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 10px 20px; background: #334155; border: none; color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.tab.active { background: #3b82f6; color: white; }
+textarea.input { min-height: 120px; font-family: monospace; resize: vertical; }
+.alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+.alert-warning { background: #78350f; color: #fbbf24; border: 1px solid #92400e; }
+.alert-success { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+.alert-danger { background: #7f1d1d; color: #f87171; border: 1px solid #991b1b; }
