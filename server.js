@@ -133,6 +133,29 @@ async function initDatabase() {
       `);
     }
 
+    // Provision Admin User via Environment Variables
+    const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+    if (ADMIN_USERNAME && ADMIN_PASSWORD) {
+      const existing = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [ADMIN_USERNAME] });
+      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      
+      if (existing.rows.length === 0) {
+        await db.execute({
+          sql: 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+          args: [ADMIN_USERNAME, hashed, 'admin']
+        });
+        console.log(\`✅ Admin user '\${ADMIN_USERNAME}' created from environment variables\`);
+      } else {
+        await db.execute({
+          sql: 'UPDATE users SET password = ?, role = "admin" WHERE username = ?',
+          args: [hashed, ADMIN_USERNAME]
+        });
+        console.log(\`✅ Admin user '\${ADMIN_USERNAME}' credentials updated from environment variables\`);
+      }
+    }
+
     console.log('✅ Database initialized');
   } catch (error) {
     console.error('DB Init Error:', error);
