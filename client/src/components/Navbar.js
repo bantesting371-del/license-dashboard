@@ -19,8 +19,8 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '20px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {logoUrl ? <img src={logoUrl} alt="Logo" style={{ height: '32px', width: '32px', borderRadius: '50%', objectFit: 'cover' }} /> : '🔐'} 
+      <Link to="/" className="navbar-brand">
+        {logoUrl ? <img src={logoUrl} alt="Logo" /> : <span>🔐</span>} 
         License Dashboard
       </Link>
       <div className="nav-links">
@@ -31,15 +31,18 @@ export default function Navbar() {
             <Link to="/licenses">Licenses</Link>
             <Link to="/payments">Payments</Link>
             {user.role === 'admin' && <Link to="/admin" style={{color:'#fbbf24'}}>Admin</Link>}
-            <span style={{ color: '#34d399', marginLeft: '15px', fontWeight: 'bold' }}>
+            <span style={{ color: '#34d399', marginLeft: '10px', fontWeight: 'bold', background: 'rgba(52, 211, 153, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
               ${user.credits?.toFixed(2)}
             </span>
-            <button onClick={handleLogout} className="btn btn-danger" style={{ marginLeft: '15px', padding: '6px 14px', fontSize: '13px' }}>
+            <button onClick={handleLogout} className="btn btn-danger" style={{ padding: '6px 14px', fontSize: '13px' }}>
               Logout
             </button>
           </>
         ) : (
-          <Link to="/login">Login</Link>
+          <>
+            <Link to="/login" className="btn" style={{ background: 'transparent', border: '1px solid #334155', color: '#fff' }}>Login</Link>
+            <Link to="/register" className="btn btn-primary">Register</Link>
+          </>
         )}
       </div>
     </nav>
