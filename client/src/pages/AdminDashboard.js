@@ -93,7 +93,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: '20px' }}>⚡ Admin Dashboard</h1>
+      <h1 className="page-title">⚡ Admin Dashboard</h1>
       <div className="tabs" style={{overflowX:'auto'}}>
         {tabs.map(t => <button key={t.id} className={`tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>{t.label}</button>)}
       </div>
