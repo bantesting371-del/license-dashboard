@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../context/AuthContext';
+
+const sanitise = (str, max = 64) => String(str ?? '').trim().slice(0, max);
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -10,45 +12,109 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Basic password strength check
+  const pwStrength = (() => {
+    if (!password) return null;
+    if (password.length < 6) return { level: 'weak', label: 'Too short', color: 'var(--danger)' };
+    if (password.length < 10) return { level: 'fair', label: 'Fair', color: 'var(--warning)' };
+    return { level: 'strong', label: 'Strong', color: 'var(--success)' };
+  })();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const u = sanitise(username);
+    const p = password.slice(0, 128);
+    if (!u || !p) { setError('All fields are required.'); return; }
+    if (!/^[a-zA-Z0-9_-]{3,32}$/.test(u)) {
+      setError('Username must be 3–32 characters (letters, numbers, _ or -).');
+      return;
+    }
+    if (p.length < 6) { setError('Password must be at least 6 characters.'); return; }
+
     setLoading(true); setError(''); setSuccess('');
     try {
-      await axios.post('/api/auth/signup', { username, password });
-      setSuccess('Registration successful! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
+      await api.post('/api/auth/signup', { username: u, password: p });
+      setSuccess('Account created! Redirecting to sign in…');
+      setTimeout(() => navigate('/login'), 1800);
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '420px', margin: '80px auto', padding: '0 16px' }}>
+    <div style={{ maxWidth: 420, margin: '60px auto', padding: '0 4px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{
+          width: 52, height: 52, background: 'linear-gradient(135deg, var(--success), #059669)',
+          borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 24, margin: '0 auto 16px'
+        }}>✨</div>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.03em' }}>Create account</h1>
+        <p style={{ marginTop: 6, fontSize: 14 }}>Get started with your license dashboard</p>
+      </div>
+
       <div className="card">
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#fff', letterSpacing: '-0.02em' }}>Create Account</h2>
-          <p style={{ color: '#a1a1aa', marginTop: '8px' }}>Join us to get your licenses</p>
-        </div>
-        {error && <div className="alert alert-danger">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#e4e4e7', fontSize: '14px', fontWeight: '600' }}>Username</label>
-            <input type="text" placeholder="Choose a username" className="input" value={username} onChange={(e) => setUsername(e.target.value)} required />
+        {error && <div className="alert alert-danger" role="alert"><span aria-hidden="true">⚠️</span> {error}</div>}
+        {success && <div className="alert alert-success" role="status"><span aria-hidden="true">✅</span> {success}</div>}
+        <form onSubmit={handleSubmit} noValidate autoComplete="on">
+          <div className="form-group">
+            <label className="form-label" htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              className="input"
+              placeholder="Choose a username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck="false"
+              maxLength={32}
+              required
+              aria-required="true"
+              aria-describedby="username-hint"
+            />
+            <p id="username-hint" style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 5 }}>
+              3–32 characters, letters/numbers/_ or -
+            </p>
           </div>
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#e4e4e7', fontSize: '14px', fontWeight: '600' }}>Password</label>
-            <input type="password" placeholder="Choose a secure password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              className="input"
+              placeholder="Choose a strong password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              maxLength={128}
+              required
+              aria-required="true"
+            />
+            {pwStrength && (
+              <p style={{ fontSize: 11.5, marginTop: 5, color: pwStrength.color, fontWeight: 600 }}>
+                Password strength: {pwStrength.label}
+              </p>
+            )}
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '16px', fontWeight: '700' }} disabled={loading}>
-             {loading ? 'Creating account...' : 'Create Account'}
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg btn-block"
+            disabled={loading}
+            aria-busy={loading}
+          >
+            {loading ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating account…</> : 'Create Account'}
           </button>
         </form>
-        <div style={{ marginTop: '32px', textAlign: 'center', fontSize: '14px', color: '#a1a1aa', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '24px' }}>
-          Already have an account? <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600', marginLeft: '6px' }}>Sign In</Link>
-        </div>
+
+        <div className="divider" />
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: 'var(--brand-light)', fontWeight: 600 }}>Sign in</Link>
+        </p>
       </div>
     </div>
   );
