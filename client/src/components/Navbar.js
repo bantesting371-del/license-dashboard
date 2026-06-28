@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [logoUrl, setLogoUrl] = useState('');
+
+  useEffect(() => {
+    axios.get('/api/config').then(res => setLogoUrl(res.data.logoUrl)).catch(console.error);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -13,8 +19,9 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '20px', fontWeight: 'bold' }}>
-        🔐 License Dashboard
+      <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '20px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {logoUrl ? <img src={logoUrl} alt="Logo" style={{ height: '32px', width: '32px', borderRadius: '50%', objectFit: 'cover' }} /> : '🔐'} 
+        License Dashboard
       </Link>
       <div className="nav-links">
         {user ? (
