@@ -146,13 +146,13 @@ async function initDatabase() {
           sql: 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
           args: [ADMIN_USERNAME, hashed, 'admin']
         });
-        console.log(\`✅ Admin user '\${ADMIN_USERNAME}' created from environment variables\`);
+        console.log(`✅ Admin user '${ADMIN_USERNAME}' created from environment variables`);
       } else {
         await db.execute({
           sql: 'UPDATE users SET password = ?, role = "admin" WHERE username = ?',
           args: [hashed, ADMIN_USERNAME]
         });
-        console.log(\`✅ Admin user '\${ADMIN_USERNAME}' credentials updated from environment variables\`);
+        console.log(`✅ Admin user '${ADMIN_USERNAME}' credentials updated from environment variables`);
       }
     }
 
