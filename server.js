@@ -196,6 +196,26 @@ async function verifyBinanceDeposit(txId, expectedAmount) {
 
 // ==================== AUTH ROUTES ====================
 
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+    const existing = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
+    if (existing.rows.length > 0) return res.status(400).json({ error: 'Username already exists' });
+
+    const hashed = await bcrypt.hash(password, 10);
+    await db.execute({
+      sql: 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      args: [username, hashed, 'user']
+    });
+
+    res.json({ message: 'User created successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/auth/register', authenticate, requireAdmin, async (req, res) => {
   try {
     const { username, password, role } = req.body;
@@ -697,7 +717,28 @@ app.post('/api/admin/notifications', authenticate, requireAdmin, async (req, res
   }
 });
 
-// ==================== STATS ====================
+// ==================== STATS & CONFIG ====================
+
+app.get('/api/config', (req, res) => {
+  res.json({
+    logoUrl: process.env.SITE_LOGO_URL || 'https://i.postimg.cc/tCDgJy6Y/IMG-20260628-153910-667.jpg'
+  });
+});
+
+app.get('/api/stats/top-resellers', authenticate, async (req, res) => {
+  try {
+    const result = await db.execute(`
+      SELECT username, total_recharged 
+      FROM users 
+      WHERE total_recharged > 0 
+      ORDER BY total_recharged DESC 
+      LIMIT 3
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
   try {
