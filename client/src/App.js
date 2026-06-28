@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Products from './pages/Products';
@@ -25,6 +26,7 @@ function App() {
         <div className="container">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/licenses" element={<ProtectedRoute><Licenses /></ProtectedRoute>} />
@@ -34,8 +36,8 @@ function App() {
         </div>
         <div style={{ textAlign: 'center', padding: '30px 20px', marginTop: '40px', borderTop: '1px solid #334155', color: '#64748b' }}>
           <p style={{ marginBottom: '10px' }}>Need help?</p>
-          <a href="https://t.me/SMGrowMarthqofc" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', marginRight: '15px', textDecoration: 'none' }}>📱 Telegram Support</a>
-          <a href="https://whatsapp.com/channel/0029Vb8933MC6ZvoqBiPVq2h" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'none' }}>💬 WhatsApp Channel</a>
+          <a href="https://www.facebook.com/profile.php?id=61575526575443" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', marginRight: '15px', textDecoration: 'none' }}>📘 Facebook Support</a>
+          <a href="https://wa.me/qr/27BNHG7PCBF6L1" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'none' }}>💬 WhatsApp Support</a>
         </div>
       </BrowserRouter>
     </AuthProvider>
