@@ -34,10 +34,10 @@ function App() {
             <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
           </Routes>
         </div>
-        <div style={{ textAlign: 'center', padding: '30px 20px', marginTop: '40px', borderTop: '1px solid #334155', color: '#64748b' }}>
-          <p style={{ marginBottom: '10px' }}>Need help?</p>
-          <a href="https://www.facebook.com/profile.php?id=61575526575443" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', marginRight: '15px', textDecoration: 'none' }}>📘 Facebook Support</a>
-          <a href="https://wa.me/qr/27BNHG7PCBF6L1" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'none' }}>💬 WhatsApp Support</a>
+        <div style={{ textAlign: 'center', padding: '32px 20px', marginTop: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.05)', color: '#a1a1aa' }}>
+          <p style={{ marginBottom: '12px', fontWeight: '500' }}>Need help?</p>
+          <a href="https://www.facebook.com/profile.php?id=61575526575443" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', marginRight: '16px', textDecoration: 'none', fontWeight: '600' }}>📘 Facebook Support</a>
+          <a href="https://wa.me/qr/27BNHG7PCBF6L1" target="_blank" rel="noopener noreferrer" style={{ color: '#34d399', textDecoration: 'none', fontWeight: '600' }}>💬 WhatsApp Support</a>
         </div>
       </BrowserRouter>
     </AuthProvider>
