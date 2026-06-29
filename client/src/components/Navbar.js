@@ -2,28 +2,34 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, api } from '../context/AuthContext';
 
+// ─── Navbar ─────────────────────────────────────────────────────────────────
+// Sticky glassmorphism bar. Desktop: inline links. Mobile: full-screen drawer
+// with animated hamburger. Branding locked to "Devish Store".
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function Navbar() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate    = useNavigate();
+  const location    = useLocation();
   const [logoUrl, setLogoUrl] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open,    setOpen]    = useState(false);
 
+  /* fetch logo from /api/config once */
   useEffect(() => {
     api.get('/api/config').then(r => setLogoUrl(r.data.logoUrl)).catch(() => {});
   }, []);
 
-  // Close mobile menu on route change
+  /* close drawer on route change */
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
-  // Close on Escape
+  /* close on Escape key */
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  // Prevent scroll when open
+  /* lock body scroll while drawer open */
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -38,26 +44,34 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   const navLinks = user ? [
-    { to: '/', label: 'Dashboard', icon: '⊞' },
-    { to: '/products', label: 'Products', icon: '📦' },
-    { to: '/licenses', label: 'Licenses', icon: '🔑' },
-    { to: '/payments', label: 'Payments', icon: '💳' },
-    ...(user.role === 'admin' ? [{ to: '/admin', label: 'Admin', icon: '⚡', admin: true }] : []),
+    { to: '/',          label: 'Dashboard', icon: '⊞' },
+    { to: '/products',  label: 'Products',  icon: '📦' },
+    { to: '/licenses',  label: 'Licenses',  icon: '🔑' },
+    { to: '/payments',  label: 'Payments',  icon: '💳' },
+    ...(user.role === 'admin'
+      ? [{ to: '/admin', label: 'Admin', icon: '⚡', admin: true }]
+      : []),
   ] : [];
 
   return (
     <>
+      {/* ── main bar ── */}
       <nav className="navbar" role="navigation" aria-label="Main navigation">
-        <Link to={user ? '/' : '/login'} className="navbar-brand" aria-label="License Dashboard home">
-          {logoUrl ? (
-            <img src={logoUrl} alt="Logo" loading="lazy" />
-          ) : (
-            <span className="brand-icon" aria-hidden="true">🔐</span>
-          )}
-          <span>LicenseHub</span>
+
+        {/* brand */}
+        <Link
+          to={user ? '/' : '/login'}
+          className="navbar-brand"
+          aria-label="Devish Store home"
+        >
+          {logoUrl
+            ? <img src={logoUrl} alt="Devish Store logo" loading="lazy" />
+            : <span className="brand-icon" aria-hidden="true">🛒</span>
+          }
+          <span>Devish Store</span>
         </Link>
 
-        {/* Desktop links */}
+        {/* desktop links */}
         {user && (
           <div className="nav-links" role="menubar">
             {navLinks.map(({ to, label, admin }) => (
@@ -71,9 +85,16 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
-            <span className="nav-credits" aria-label={`Balance: $${user.credits?.toFixed(2)}`}>
-              <span aria-hidden="true">💰</span> ${user.credits?.toFixed(2) ?? '0.00'}
+
+            {/* balance chip */}
+            <span
+              className="nav-credits"
+              aria-label={`Balance: $${user.credits?.toFixed(2)}`}
+            >
+              <span aria-hidden="true">💰</span>
+              ${user.credits?.toFixed(2) ?? '0.00'}
             </span>
+
             <button
               onClick={handleLogout}
               className="btn btn-ghost btn-sm"
@@ -86,12 +107,12 @@ export default function Navbar() {
 
         {!user && (
           <div className="nav-links">
-            <Link to="/login" className="btn btn-ghost btn-sm">Sign in</Link>
+            <Link to="/login"    className="btn btn-ghost btn-sm">Sign in</Link>
             <Link to="/register" className="btn btn-primary btn-sm">Register</Link>
           </div>
         )}
 
-        {/* Hamburger */}
+        {/* hamburger – only when logged in */}
         {user && (
           <button
             className={`nav-hamburger ${open ? 'open' : ''}`}
@@ -105,7 +126,7 @@ export default function Navbar() {
         )}
       </nav>
 
-      {/* Mobile panel */}
+      {/* ── mobile drawer ── */}
       {user && (
         <div
           id="mobile-nav"
@@ -114,6 +135,21 @@ export default function Navbar() {
           aria-modal="true"
           aria-label="Navigation menu"
         >
+          {/* store name in drawer header */}
+          <div style={{
+            padding: '4px 16px 16px',
+            borderBottom: '1px solid var(--border-subtle)',
+            marginBottom: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 20 }}>🛒</span>
+            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>
+              Devish Store
+            </span>
+          </div>
+
           {navLinks.map(({ to, label, icon, admin }) => (
             <Link
               key={to}
@@ -123,10 +159,14 @@ export default function Navbar() {
               <span aria-hidden="true">{icon}</span> {label}
             </Link>
           ))}
+
+          {/* balance in drawer */}
           <div className="mobile-credits">
             <span aria-hidden="true">💰</span>
             Balance: <strong>${user.credits?.toFixed(2) ?? '0.00'}</strong>
           </div>
+
+          {/* logout */}
           <button className="mobile-logout" onClick={handleLogout}>
             <span aria-hidden="true">🚪</span> Sign out
           </button>
