@@ -49,15 +49,17 @@ export default function Register() {
         <div style={{
           width: 52, height: 52, background: 'linear-gradient(135deg, var(--success), #059669)',
           borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 24, margin: '0 auto 16px'
-        }}>✨</div>
+          justifyContent: 'center', margin: '0 auto 16px', color: '#fff'
+        }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        </div>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.03em' }}>Create account</h1>
         <p style={{ marginTop: 6, fontSize: 14 }}>Get started with your license dashboard</p>
       </div>
 
       <div className="card">
-        {error && <div className="alert alert-danger" role="alert"><span aria-hidden="true">⚠️</span> {error}</div>}
-        {success && <div className="alert alert-success" role="status"><span aria-hidden="true">✅</span> {success}</div>}
+        {error && <div className="alert alert-danger" role="alert" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span aria-hidden="true" style={{ display: 'flex' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> {error}</div>}
+        {success && <div className="alert alert-success" role="status" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span aria-hidden="true" style={{ display: 'flex' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> {success}</div>}
         <form onSubmit={handleSubmit} noValidate autoComplete="on">
           <div className="form-group">
             <label className="form-label" htmlFor="username">Username</label>
