@@ -137,6 +137,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState([]);
   const [licenses, setLicenses] = useState([]);
   const [keys,     setKeys]     = useState([]);
+  const [hwidRequests, setHwidRequests] = useState([]);
 
   // per-section error messages
   const [errors, setErrors] = useState({});
@@ -188,6 +189,7 @@ export default function AdminDashboard() {
       { key: 'payments', url: '/api/admin/payments' },
       { key: 'licenses', url: '/api/admin/licenses' },
       { key: 'keys',     url: '/api/admin/keys' },
+      { key: 'hwid',     url: '/api/admin/hwid-requests' },
     ];
 
     const results = await Promise.allSettled(
@@ -205,6 +207,7 @@ export default function AdminDashboard() {
         if (key === 'payments') setPayments(data);
         if (key === 'licenses') setLicenses(data);
         if (key === 'keys')     setKeys(data);
+        if (key === 'hwid')     setHwidRequests(data);
         newErrors[key] = null;
       } else {
         newErrors[key] = res.reason?.response?.data?.error
@@ -228,6 +231,20 @@ export default function AdminDashboard() {
       setActionBusy(key, false);
     }
   };
+
+  const handleApproveHwid = guard('hwid', async (id) => {
+    if (!window.confirm('Approve this HWID reset?')) return;
+    await api.post(`/api/admin/hwid-requests/${id}/approve`);
+    await fetchAll();
+    showToast('HWID reset approved.');
+  });
+
+  const handleRejectHwid = guard('hwid', async (id) => {
+    if (!window.confirm('Reject this HWID reset?')) return;
+    await api.post(`/api/admin/hwid-requests/${id}/reject`);
+    await fetchAll();
+    showToast('HWID reset rejected.');
+  });
 
   //  handlers 
   const handleCreateUser = guard('createUser', async (e) => {
@@ -389,6 +406,7 @@ export default function AdminDashboard() {
     { id: 'keys',          label: 'Keys',           icon: ICONS.keys },
     { id: 'payments',      label: 'Payments',       icon: ICONS.payments,  badge: pendingPayments.length },
     { id: 'licenses',      label: 'Licenses',       icon: ICONS.licenses },
+    { id: 'hwid_requests', label: 'HWID Resets',    icon: ICONS.keys,      badge: hwidRequests.filter(r => r.status === 'pending').length },
     { id: 'notifications', label: 'Notify',         icon: ICONS.notify },
   ];
 
@@ -456,6 +474,9 @@ export default function AdminDashboard() {
             <StatCard icon={ICONS.keys} label="Keys Sold"        value={stats.totalKeysSold} color="var(--info)" />
             <StatCard icon={ICONS.success} label="Active Licenses"  value={stats.activeLicenses} color="var(--warning)" />
             <StatCard icon={ICONS.products} label="Products"         value={stats.totalProducts} color="var(--brand-light)" />
+            <StatCard icon={ICONS.keys} label="Pending HWID Resets" value={stats.pendingHwidResets || 0} color="var(--danger)" 
+              sub={(stats.pendingHwidResets || 0) > 0 ? 'Action required' : undefined} 
+            />
             <StatCard icon={ICONS.notify} label="Pending Payments" value={stats.pendingPayments} color="var(--danger)"
               sub={stats.pendingPayments > 0 ? 'Action required' : undefined}
             />
@@ -1180,6 +1201,81 @@ export default function AdminDashboard() {
                     <tr><td colSpan="6">
                       <div className="empty-state"><div className="empty-state-icon" style={{ width: 48, height: 48, margin: '0 auto', color: 'var(--text-muted)' }}>{ICONS.licenses}</div><p>{licSearch ? 'No results' : 'No licenses yet'}</p></div>
                     </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*  HWID REQUESTS  */}
+      {activeTab === 'hwid_requests' && (
+        <div>
+          {errors.hwid && <SectionError message={errors.hwid} onRetry={fetchAll} />}
+
+          <div className="card card-flush">
+            <div className="card-list-header">
+              <h2 className="section-title" style={{ margin: 0 }}>HWID Reset Requests</h2>
+              <span className="badge badge-muted">{hwidRequests.length}</span>
+            </div>
+            <div className="table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>License Key</th>
+                    <th>Username</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hwidRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan="5">
+                        <div className="empty-state">
+                          <p>No HWID reset requests.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    hwidRequests.map(r => (
+                      <tr key={r.id}>
+                        <td>
+                          <code style={{ fontSize: 11, background: 'var(--bg-inset)', padding: '4px 8px', borderRadius: '4px' }}>
+                            {r.license_key}
+                          </code>
+                        </td>
+                        <td>{r.username}</td>
+                        <td>
+                          <span className={`badge ${r.status === 'pending' ? 'badge-warning' : r.status === 'completed' ? 'badge-success' : 'badge-danger'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ display: 'flex', width: 8, height: 8, borderRadius: '50%', backgroundColor: 'currentColor' }} /> {r.status}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>{new Date(r.created_at).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          {r.status === 'pending' && (
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => handleApproveHwid(r.id)}
+                                disabled={busy['hwid']}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleRejectHwid(r.id)}
+                                disabled={busy['hwid']}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
