@@ -632,7 +632,7 @@ app.post('/api/licenses/buy', authenticate, async (req, res) => {
 
     await db.execute({ sql: 'UPDATE users SET credits = credits - ? WHERE id = ?', args: [price, req.user.id] });
     await db.execute({
-      sql: 'UPDATE key_pool SET is_used = 1, used_by = ?, used_at = datetime("now") WHERE id = ?',
+      sql: 'UPDATE key_pool SET is_used = 1, used_by = ?, used_at = datetime(\'now\') WHERE id = ?',
       args: [username, keyData.id]
     });
     await db.execute({
@@ -668,7 +668,7 @@ app.post('/api/licenses/:id/reset', authenticate, async (req, res) => {
     if (license.rows.length === 0) return res.status(404).json({ error: 'License not found' });
 
     await db.execute({
-      sql: 'UPDATE licenses SET hwid = NULL, last_reset = datetime("now") WHERE id = ?',
+      sql: 'UPDATE licenses SET hwid = NULL, last_reset = datetime(\'now\') WHERE id = ?',
       args: [req.params.id]
     });
     res.json({ message: 'HWID reset successful' });
@@ -753,7 +753,7 @@ app.post('/api/payments/verify', rateLimit(20, 60000), authenticate, async (req,
     // Success - add credits
     const credits = parseFloat(verification.amount);
     await db.execute({
-      sql: 'UPDATE payments SET status = ?, tx_id = ?, credits_added = ?, approved_date = datetime("now") WHERE order_id = ?',
+      sql: 'UPDATE payments SET status = ?, tx_id = ?, credits_added = ?, approved_date = datetime(\'now\') WHERE order_id = ?',
       args: ['completed', cleanTxId, credits, orderId]
     });
     await db.execute({
@@ -801,7 +801,7 @@ app.put('/api/admin/payments/:id/approve', authenticate, requireAdmin, async (re
 
     const username = payment.rows[0].username;
     await db.execute({
-      sql: 'UPDATE payments SET status = ?, credits_added = ?, approved_date = datetime("now"), approved_by = ? WHERE id = ?',
+      sql: 'UPDATE payments SET status = ?, credits_added = ?, approved_date = datetime(\'now\'), approved_by = ? WHERE id = ?',
       args: ['completed', credits, req.user.username, id]
     });
     await db.execute({
@@ -822,7 +822,7 @@ app.put('/api/admin/payments/:id/reject', authenticate, requireAdmin, async (req
     if (payment.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
 
     await db.execute({
-      sql: 'UPDATE payments SET status = ?, approved_date = datetime("now"), approved_by = ? WHERE id = ?',
+      sql: 'UPDATE payments SET status = ?, approved_date = datetime(\'now\'), approved_by = ? WHERE id = ?',
       args: ['failed', req.user.username, id]
     });
 
@@ -903,9 +903,9 @@ app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
       db.execute("SELECT COUNT(*) as c FROM users WHERE COALESCE(role,'user') != 'admin'"),
       db.execute('SELECT SUM(total_recharged) as t FROM users'),
       db.execute('SELECT COUNT(*) as c FROM licenses'),
-      db.execute('SELECT COUNT(*) as c FROM licenses WHERE status = "active" AND expiry_date > datetime("now")'),
+      db.execute('SELECT COUNT(*) as c FROM licenses WHERE status = \'active\' AND expiry_date > datetime(\'now\')'),
       db.execute('SELECT COUNT(*) as c FROM products'),
-      db.execute('SELECT COUNT(*) as c FROM payments WHERE status = "pending"')
+      db.execute('SELECT COUNT(*) as c FROM payments WHERE status = \'pending\'')
     ]);
 
     res.json({
