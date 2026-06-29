@@ -1,158 +1,236 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, api } from '../context/AuthContext';
 
+// ─── Payments page ────────────────────────────────────────────────────────────
+// Two-step deposit flow:
+//   Step 1 – enter USDT amount → server creates order & returns deposit address
+//   Step 2 – user sends USDT, pastes TXID → server verifies via Binance API
+// History table beneath the form shows all past payments.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function Toast({ msg, type }) {
+  if (!msg) return null;
+  return (
+    <div className={`toast toast-${type}`} role="alert" aria-live="assertive">
+      <span>{type === 'success' ? '✅' : '⚠️'}</span>
+      <span>{msg}</span>
+    </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    completed: 'badge-success',
+    pending:   'badge-warning',
+    failed:    'badge-danger',
+  };
+  return (
+    <span className={`badge ${map[status] || 'badge-muted'}`}>
+      {status}
+    </span>
+  );
+}
+
 export default function Payments() {
-  const { refreshUser } = useAuth();
-  const [payments, setPayments] = useState([]);
-  const [amount, setAmount] = useState('');
-  const [txId, setTxId] = useState('');
-  const [activeOrder, setActiveOrder] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [copied, setCopied] = useState(false);
+  const { refreshUser }                         = useAuth();
+  const [payments,      setPayments]            = useState([]);
+  const [amount,        setAmount]              = useState('');
+  const [txId,          setTxId]                = useState('');
+  const [activeOrder,   setActiveOrder]         = useState(null);
+  const [createLoading, setCreateLoading]       = useState(false);
+  const [verifyLoading, setVerifyLoading]       = useState(false);
+  const [copied,        setCopied]              = useState(false);
+  const [toast,         setToast]               = useState({ msg: '', type: 'success' });
+  const [histLoading,   setHistLoading]         = useState(true);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast({ msg: '', type }), 5000);
+  };
 
   const fetchPayments = useCallback(async () => {
     try {
       const res = await api.get('/api/payments/my');
       setPayments(res.data);
     } catch { /* silent */ }
+    finally { setHistLoading(false); }
   }, []);
 
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
 
+  /* Step 1 — create order */
   const handleCreate = async (e) => {
     e.preventDefault();
     const val = parseFloat(amount);
-    if (!val || val <= 0 || val > 100000) { setError('Enter a valid amount.'); return; }
-    setLoading(true); setError(''); setSuccess('');
+    if (!amount || isNaN(val) || val <= 0) {
+      showToast('Enter a valid amount greater than 0.', 'danger');
+      return;
+    }
+    if (val > 100_000) {
+      showToast('Amount too large. Contact support for large deposits.', 'danger');
+      return;
+    }
+    setCreateLoading(true);
     try {
       const res = await api.post('/api/payments/create', { amount: val });
       setActiveOrder(res.data);
       setAmount('');
     } catch (e) {
-      setError(e.response?.data?.error || 'Failed to create payment.');
-    } finally { setLoading(false); }
+      showToast(e.response?.data?.error || 'Failed to create payment. Try again.', 'danger');
+    } finally {
+      setCreateLoading(false);
+    }
   };
 
+  /* Step 2 — verify TXID */
   const handleVerify = async (e) => {
     e.preventDefault();
-    if (!activeOrder) return;
     const tx = txId.trim();
-    if (!tx) { setError('Transaction ID is required.'); return; }
-    // Basic TXID format check
+    if (!tx) { showToast('Paste your Transaction ID.', 'danger'); return; }
     if (!/^[a-fA-F0-9]{20,80}$/.test(tx)) {
-      setError('Transaction ID appears invalid. Please copy it directly from Binance.');
+      showToast('Invalid TXID format. Copy it directly from Binance.', 'danger');
       return;
     }
-    setVerifyLoading(true); setError(''); setSuccess('');
+    setVerifyLoading(true);
     try {
       const res = await api.post('/api/payments/verify', {
         orderId: activeOrder.orderId,
-        txId: tx,
+        txId:    tx,
       });
-      setSuccess(res.data.message);
-      setTxId(''); setActiveOrder(null);
-      refreshUser(); fetchPayments();
+      showToast(res.data.message || 'Credits added successfully!', 'success');
+      setTxId('');
+      setActiveOrder(null);
+      refreshUser();
+      fetchPayments();
     } catch (e) {
       const d = e.response?.data;
-      setError(d?.message || d?.error || 'Verification failed. Please try again.');
-    } finally { setVerifyLoading(false); }
+      showToast(d?.message || d?.error || 'Verification failed. Please try again.', 'danger');
+    } finally {
+      setVerifyLoading(false);
+    }
   };
 
-  const copyAddress = () => {
+  const copyAddress = async () => {
     if (!activeOrder?.binanceAddress) return;
-    navigator.clipboard?.writeText(activeOrder.binanceAddress).then(() => {
+    try {
+      await navigator.clipboard.writeText(activeOrder.binanceAddress);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+      setTimeout(() => setCopied(false), 2200);
+    } catch { /* clipboard blocked */ }
   };
 
-  const statusBadge = (s) => {
-    const map = { completed: 'badge-success', pending: 'badge-warning', failed: 'badge-danger' };
-    return <span className={`badge ${map[s] || 'badge-muted'}`}>{s}</span>;
+  const cancelOrder = () => {
+    setActiveOrder(null);
+    setTxId('');
   };
 
   return (
     <div>
-      <h1 className="page-title">Payments</h1>
+      <Toast msg={toast.msg} type={toast.type} />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 20 }}>
+      {/* ── header ── */}
+      <div className="page-header">
+        <h1 className="page-title" style={{ margin: 0 }}>Payments</h1>
+        <span className="badge badge-muted">
+          {payments.filter(p => p.status === 'completed').length} completed
+        </span>
+      </div>
+
+      {/* ── deposit flow ── */}
+      <div className="payment-flow">
+
         {/* Step 1 */}
-        <div className="card" style={{ flex: '1 1 320px', margin: 0 }}>
-          <h2 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
-            Step 1 — Set Amount
-          </h2>
-          {error && !activeOrder && (
-            <div className="alert alert-danger" role="alert">{error}</div>
-          )}
+        <div className="card payment-step" data-step="1">
+          <div className="step-header">
+            <span className="step-badge">Step 1</span>
+            <h2 className="step-title">Set Amount</h2>
+          </div>
+          <p className="step-desc">Enter how many USDT you want to deposit.</p>
+
           <form onSubmit={handleCreate} noValidate>
             <div className="form-group">
-              <label className="form-label" htmlFor="amount">Amount (USDT)</label>
-              <input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="1"
-                max="100000"
-                className="input"
-                placeholder="e.g. 50.00"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                disabled={!!activeOrder}
-                required
-              />
+              <label className="form-label" htmlFor="dep-amount">Amount (USDT)</label>
+              <div className="input-prefix-wrap">
+                <span className="input-prefix">$</span>
+                <input
+                  id="dep-amount"
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  max="100000"
+                  className="input input-prefixed"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  disabled={!!activeOrder || createLoading}
+                  aria-describedby="amount-hint"
+                  required
+                />
+              </div>
+              <p id="amount-hint" style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 5 }}>
+                Minimum: $1.00 USDT (TRC-20 / BEP-20)
+              </p>
             </div>
             <button
               type="submit"
               className="btn btn-primary btn-block"
-              disabled={loading || !!activeOrder}
-              aria-busy={loading}
+              disabled={createLoading || !!activeOrder}
+              aria-busy={createLoading}
             >
-              {loading ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating…</> : 'Create Payment'}
+              {createLoading
+                ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating order…</>
+                : 'Create Payment Order'
+              }
             </button>
           </form>
         </div>
 
-        {/* Step 2 */}
+        {/* Step 2 — only shown after order created */}
         {activeOrder && (
-          <div className="card" style={{ flex: '1 1 320px', margin: 0, borderColor: 'var(--border-default)' }}>
-            <h2 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
-              Step 2 — Send & Verify
-            </h2>
+          <div className="card payment-step payment-step-active" data-step="2">
+            <div className="step-header">
+              <span className="step-badge step-badge-active">Step 2</span>
+              <h2 className="step-title">Send & Verify</h2>
+            </div>
+            <p className="step-desc">
+              Send exactly <strong style={{ color: 'var(--warning)' }}>
+                ${activeOrder.amount} USDT
+              </strong> to the address below, then paste the Transaction ID.
+            </p>
 
-            <div className="alert alert-info" style={{ marginBottom: 16 }}>
-              Send exactly <strong>${activeOrder.amount} USDT</strong> to the address below, then paste your Transaction ID.
+            {/* amount highlight */}
+            <div className="amount-highlight">
+              <span className="ah-label">Amount to send</span>
+              <span className="ah-value">${activeOrder.amount} USDT</span>
             </div>
 
+            {/* deposit address */}
             <div className="form-group">
-              <label className="form-label">Deposit Address (USDT)</label>
-              <div style={{ position: 'relative' }}>
-                <code className="code-block" style={{ paddingRight: 80 }}>{activeOrder.binanceAddress}</code>
+              <label className="form-label">Deposit Address</label>
+              <div className="address-box">
+                <code className="address-value">{activeOrder.binanceAddress}</code>
                 <button
                   type="button"
-                  className="btn btn-sm btn-ghost"
+                  className={`copy-btn ${copied ? 'copy-btn-done' : ''}`}
                   onClick={copyAddress}
-                  style={{ position: 'absolute', top: 8, right: 8 }}
-                  aria-label="Copy deposit address"
+                  aria-label={copied ? 'Copied!' : 'Copy deposit address'}
                 >
-                  {copied ? '✅ Copied' : 'Copy'}
+                  {copied ? '✅' : '📋'}
                 </button>
               </div>
+              <p style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6 }}>
+                ⚠️ Only send USDT. Do not send other coins.
+              </p>
             </div>
 
-            {(error || success) && (
-              <div className={`alert alert-${success ? 'success' : 'danger'}`} role="alert">
-                {success || error}
-              </div>
-            )}
-
+            {/* txid input */}
             <form onSubmit={handleVerify} noValidate>
               <div className="form-group">
-                <label className="form-label" htmlFor="txid">Transaction ID (TXID)</label>
+                <label className="form-label" htmlFor="txid-input">
+                  Transaction ID (TXID)
+                </label>
                 <input
-                  id="txid"
+                  id="txid-input"
                   type="text"
                   className="input"
                   placeholder="Paste TXID from Binance"
@@ -166,21 +244,22 @@ export default function Payments() {
               </div>
               <button
                 type="submit"
-                className="btn btn-primary btn-block"
+                className="btn btn-success btn-block"
                 disabled={verifyLoading}
                 aria-busy={verifyLoading}
               >
                 {verifyLoading
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Verifying…</>
-                  : 'Verify & Add Credits'}
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Verifying with Binance…</>
+                  : 'Verify & Add Credits'
+                }
               </button>
             </form>
 
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => { setActiveOrder(null); setError(''); setSuccess(''); }}
-              style={{ marginTop: 12, width: '100%' }}
+              onClick={cancelOrder}
+              style={{ marginTop: 10, width: '100%' }}
             >
               Cancel this order
             </button>
@@ -188,50 +267,68 @@ export default function Payments() {
         )}
       </div>
 
-      {success && !activeOrder && (
-        <div className="alert alert-success" role="status">{success}</div>
-      )}
+      {/* ── history ── */}
+      <div className="card card-flush" style={{ marginTop: 8 }}>
+        <div className="card-list-header">
+          <h2 className="section-title" style={{ margin: 0 }}>Payment History</h2>
+          {!histLoading && (
+            <span className="badge badge-muted">{payments.length}</span>
+          )}
+        </div>
 
-      {/* History */}
-      <div className="card card-flush">
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Payment History</h2>
-          <span className="badge badge-muted">{payments.length}</span>
-        </div>
-        <div className="table-wrap" style={{ border: 'none', borderRadius: 0 }}>
-          <table className="table" aria-label="Payment history">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Amount</th>
-                <th>Credits</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map(p => (
-                <tr key={p.id}>
-                  <td><code style={{ fontSize: 11 }}>{p.order_id}</code></td>
-                  <td><strong style={{ color: 'var(--success)' }}>${p.amount}</strong></td>
-                  <td>{p.credits_added ? <span className="badge badge-success">+${p.credits_added}</span> : '—'}</td>
-                  <td>{statusBadge(p.status)}</td>
-                  <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(p.date).toLocaleString()}</td>
-                </tr>
-              ))}
-              {payments.length === 0 && (
+        {histLoading ? (
+          <div style={{ padding: 40, display: 'flex', justifyContent: 'center' }}>
+            <div className="spinner" aria-hidden="true" />
+          </div>
+        ) : (
+          <div className="table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+            <table className="table" aria-label="Payment history">
+              <thead>
                 <tr>
-                  <td colSpan="5">
-                    <div className="empty-state">
-                      <div className="empty-state-icon">💳</div>
-                      <p>No payment history yet</p>
-                    </div>
-                  </td>
+                  <th>Order</th>
+                  <th>Amount</th>
+                  <th>Credits Added</th>
+                  <th>Status</th>
+                  <th>Date</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {payments.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <code style={{ fontSize: 11 }}>
+                        {p.order_id?.slice(0, 20)}{p.order_id?.length > 20 ? '…' : ''}
+                      </code>
+                    </td>
+                    <td>
+                      <strong style={{ color: 'var(--text-primary)' }}>${p.amount}</strong>
+                    </td>
+                    <td>
+                      {p.credits_added
+                        ? <span className="badge badge-success">+${p.credits_added}</span>
+                        : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      }
+                    </td>
+                    <td><StatusBadge status={p.status} /></td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {new Date(p.date).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                {payments.length === 0 && (
+                  <tr>
+                    <td colSpan="5">
+                      <div className="empty-state">
+                        <div className="empty-state-icon">💳</div>
+                        <p>No payment history yet</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
