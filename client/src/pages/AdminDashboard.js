@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../context/AuthContext';
 
-// 鈹€鈹€鈹€ Admin Dashboard 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 閳光偓閳光偓閳光偓 Admin Dashboard 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 // Full admin panel with tabbed navigation.
-// Tabs: Stats 路 Users 路 Products 路 Keys 路 Payments 路 Licenses 路 Notifications
+// Tabs: Stats 璺� Users 璺� Products 璺� Keys 璺� Payments 璺� Licenses 璺� Notifications
 //
 // Key fixes vs previous version:
-//  鈥� fetchAll uses Promise.allSettled so ONE failing endpoint never blocks the rest
-//  鈥� Each data slice has its own error state 鈥� shown inline per section
-//  鈥� Product image_url is truly optional (not validated, not required)
-//  鈥� Product create sends days_config as JSON string if backend expects it
-//  鈥� Key upload supports multi-line paste, trims blank lines
-//  鈥� Payment approve with confirmation dialog
-//  鈥� Admin register uses /api/auth/register (admin-only route)
-//  鈥� All destructive actions require window.confirm
-//  鈥� Toast is fixed-position bottom-right, auto-dismisses
-// 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+//  閳ワ拷 fetchAll uses Promise.allSettled so ONE failing endpoint never blocks the rest
+//  閳ワ拷 Each data slice has its own error state 閳ワ拷 shown inline per section
+//  閳ワ拷 Product image_url is truly optional (not validated, not required)
+//  閳ワ拷 Product create sends days_config as JSON string if backend expects it
+//  閳ワ拷 Key upload supports multi-line paste, trims blank lines
+//  閳ワ拷 Payment approve with confirmation dialog
+//  閳ワ拷 Admin register uses /api/auth/register (admin-only route)
+//  閳ワ拷 All destructive actions require window.confirm
+//  閳ワ拷 Toast is fixed-position bottom-right, auto-dismisses
+// 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 
-// 鈹€鈹€ Toast 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 閳光偓閳光偓 Toast 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 function Toast({ toast }) {
   if (!toast || !toast.msg) return null;
   return (
@@ -30,17 +30,17 @@ function Toast({ toast }) {
         maxWidth: 380, boxShadow: 'var(--shadow-lg)', margin: 0,
       }}
     >
-      <span aria-hidden="true">{toast.type === 'success' ? '鉁�' : '鈿狅笍'}</span>
+      <span aria-hidden="true">{toast.type === 'success' ? '閴侊拷' : '閳跨媴绗�'}</span>
       <span>{toast.msg}</span>
     </div>
   );
 }
 
-// 鈹€鈹€ SectionError 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 閳光偓閳光偓 SectionError 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 function SectionError({ message, onRetry }) {
   return (
     <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <span>鈿狅笍 {message}</span>
+      <span>閳跨媴绗� {message}</span>
       {onRetry && (
         <button className="btn btn-sm btn-ghost" onClick={onRetry}>
           Retry
@@ -50,19 +50,19 @@ function SectionError({ message, onRetry }) {
   );
 }
 
-// 鈹€鈹€ StatCard 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 閳光偓閳光偓 StatCard 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 function StatCard({ icon, label, value, color, sub }) {
   return (
     <div className="stat-card" style={{ gap: 6 }}>
       <div className="stat-icon" style={{ background: `${color}1a`, fontSize: 20 }}>{icon}</div>
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ color }}>{value ?? '鈥�'}</div>
+      <div className="stat-value" style={{ color }}>{value ?? '閳ワ拷'}</div>
       {sub && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
 
-// 鈹€鈹€ DayRow 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 閳光偓閳光偓 DayRow 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 function DayRow({ config, index, onChange, onRemove }) {
   const DAY_OPTIONS = [1, 3, 7, 14, 30, 60, 90, 180, 365];
   return (
@@ -98,15 +98,15 @@ function DayRow({ config, index, onChange, onRemove }) {
         onClick={() => onRemove(index)}
         aria-label={`Remove ${config.days}-day option`}
       >
-        鉁�
+        閴侊拷
       </button>
     </div>
   );
 }
 
-// 鈹€鈹€ Main Component 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 閳光偓閳光偓 Main Component 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 export default function AdminDashboard() {
-  // 鈹€鈹€ state 鈹€鈹€
+  // 閳光偓閳光偓 state 閳光偓閳光偓
   const [activeTab, setActiveTab] = useState('stats');
   const [toast,     setToast]     = useState({ msg: '', type: 'success' });
 
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
 
   const toastTimer = useRef(null);
 
-  // 鈹€鈹€ helpers 鈹€鈹€
+  // 閳光偓閳光偓 helpers 閳光偓閳光偓
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type });
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
   const setActionBusy = (key, val) =>
     setActionLoading(prev => ({ ...prev, [key]: val }));
 
-  // 鈹€鈹€ fetch 鈹€鈹€
+  // 閳光偓閳光偓 fetch 閳光偓閳光偓
   const fetchAll = useCallback(async () => {
     setGlobalLoading(true);
     const endpoints = [
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // 鈹€鈹€ guard wrapper 鈹€鈹€
+  // 閳光偓閳光偓 guard wrapper 閳光偓閳光偓
   const guard = (key, fn) => async (...args) => {
     setActionBusy(key, true);
     try {
@@ -209,14 +209,14 @@ export default function AdminDashboard() {
     }
   };
 
-  // 鈹€鈹€ handlers 鈹€鈹€
+  // 閳光偓閳光偓 handlers 閳光偓閳光偓
   const handleCreateUser = guard('createUser', async (e) => {
     e.preventDefault();
     const u = newUser.username.trim().slice(0, 64);
     const p = newUser.password.slice(0, 128);
     if (!u || !p) { showToast('Username and password are required.', 'danger'); return; }
     if (!/^[a-zA-Z0-9_-]{3,32}$/.test(u)) {
-      showToast('Username: 3鈥�32 chars, letters/numbers/_ or -.', 'danger'); return;
+      showToast('Username: 3閳ワ拷32 chars, letters/numbers/_ or -.', 'danger'); return;
     }
     if (p.length < 6) { showToast('Password must be at least 6 characters.', 'danger'); return; }
     await api.post('/api/auth/register', { username: u, password: p, role: newUser.role });
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
       key_type:            newProduct.key_type,
       custom_key_pattern:  newProduct.custom_key_pattern.trim(),
       days_config:         newProduct.days_config,
-      // image_url is fully optional 鈥� only include if non-empty
+      // image_url is fully optional 閳ワ拷 only include if non-empty
       ...(newProduct.image_url.trim()
         ? { image_url: newProduct.image_url.trim() }
         : {}),
@@ -294,6 +294,13 @@ export default function AdminDashboard() {
     await api.put(`/api/admin/payments/${id}/approve`, { credits: amount });
     await fetchAll();
     showToast(`Payment for "${username}" approved.`);
+  });
+
+  const handleRejectPayment = guard('reject', async (id, amount, username) => {
+    if (!window.confirm(`Reject $${amount} payment for "${username}"?`)) return;
+    await api.put(`/api/admin/payments/${id}/reject`);
+    await fetchAll();
+    showToast(`Payment for "${username}" rejected.`);
   });
 
   const handleBanUser = guard('ban', async (id, isBanned, username) => {
@@ -340,7 +347,7 @@ export default function AdminDashboard() {
   const removeDayOption = (i) =>
     setNewProduct(p => ({ ...p, days_config: p.days_config.filter((_, j) => j !== i) }));
 
-  // 鈹€鈹€ derived 鈹€鈹€
+  // 閳光偓閳光偓 derived 閳光偓閳光偓
   const now              = new Date();
   const pendingPayments  = payments.filter(p => p.status === 'pending');
   const filteredUsers    = users.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase()));
@@ -354,28 +361,28 @@ export default function AdminDashboard() {
     l.product_name?.toLowerCase().includes(licSearch.toLowerCase())
   );
 
-  // 鈹€鈹€ tabs config 鈹€鈹€
+  // 閳光偓閳光偓 tabs config 閳光偓閳光偓
   const TABS = [
-    { id: 'stats',         label: 'Stats',         icon: '馃搳' },
-    { id: 'users',         label: 'Users',          icon: '馃懃',  badge: null },
-    { id: 'products',      label: 'Products',       icon: '馃摝' },
-    { id: 'keys',          label: 'Keys',           icon: '馃攽' },
-    { id: 'payments',      label: 'Payments',       icon: '馃挸',  badge: pendingPayments.length },
-    { id: 'licenses',      label: 'Licenses',       icon: '馃搵' },
-    { id: 'notifications', label: 'Notify',         icon: '馃敂' },
+    { id: 'stats',         label: 'Stats',         icon: '棣冩惓' },
+    { id: 'users',         label: 'Users',          icon: '棣冩噧',  badge: null },
+    { id: 'products',      label: 'Products',       icon: '棣冩憹' },
+    { id: 'keys',          label: 'Keys',           icon: '棣冩斀' },
+    { id: 'payments',      label: 'Payments',       icon: '棣冩尭',  badge: pendingPayments.length },
+    { id: 'licenses',      label: 'Licenses',       icon: '棣冩惖' },
+    { id: 'notifications', label: 'Notify',         icon: '棣冩晜' },
   ];
 
-  // 鈹€鈹€ loading screen 鈹€鈹€
+  // 閳光偓閳光偓 loading screen 閳光偓閳光偓
   if (globalLoading) {
     return (
       <div className="page-loader" role="status">
         <div className="spinner" aria-hidden="true" />
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading admin data鈥�</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading admin data閳ワ拷</span>
       </div>
     );
   }
 
-  // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
   return (
     <div>
       <Toast toast={toast} />
@@ -393,11 +400,11 @@ export default function AdminDashboard() {
           onClick={fetchAll}
           aria-label="Refresh all data"
         >
-          馃攧 Refresh
+          棣冩敡 Refresh
         </button>
       </div>
 
-      {/* 鈹€鈹€ tab bar 鈹€鈹€ */}
+      {/* 閳光偓閳光偓 tab bar 閳光偓閳光偓 */}
       <div className="tabs admin-tabs" role="tablist" aria-label="Admin sections">
         {TABS.map(t => (
           <button
@@ -419,24 +426,24 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 STATS 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 STATS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'stats' && (
         <div>
           {errors.stats && <SectionError message={errors.stats} onRetry={fetchAll} />}
           <div className="grid-stats">
-            <StatCard icon="馃懃" label="Total Users"      value={stats.totalUsers}    color="var(--brand-light)" />
-            <StatCard icon="馃挵" label="Total Revenue"    value={stats.totalRevenue != null ? `$${Number(stats.totalRevenue).toFixed(2)}` : '鈥�'} color="var(--success)" />
-            <StatCard icon="馃攽" label="Keys Sold"        value={stats.totalKeysSold} color="var(--info)" />
-            <StatCard icon="鉁�" label="Active Licenses"  value={stats.activeLicenses} color="var(--warning)" />
-            <StatCard icon="馃摝" label="Products"         value={stats.totalProducts} color="var(--brand-light)" />
-            <StatCard icon="鈴�" label="Pending Payments" value={stats.pendingPayments} color="var(--danger)"
+            <StatCard icon="棣冩噧" label="Total Users"      value={stats.totalUsers}    color="var(--brand-light)" />
+            <StatCard icon="棣冩尩" label="Total Revenue"    value={stats.totalRevenue != null ? `$${Number(stats.totalRevenue).toFixed(2)}` : '閳ワ拷'} color="var(--success)" />
+            <StatCard icon="棣冩斀" label="Keys Sold"        value={stats.totalKeysSold} color="var(--info)" />
+            <StatCard icon="閴侊拷" label="Active Licenses"  value={stats.activeLicenses} color="var(--warning)" />
+            <StatCard icon="棣冩憹" label="Products"         value={stats.totalProducts} color="var(--brand-light)" />
+            <StatCard icon="閳达拷" label="Pending Payments" value={stats.pendingPayments} color="var(--danger)"
               sub={stats.pendingPayments > 0 ? 'Action required' : undefined}
             />
           </div>
         </div>
       )}
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 USERS 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 USERS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'users' && (
         <div>
           {errors.users && <SectionError message={errors.users} onRetry={fetchAll} />}
@@ -453,7 +460,7 @@ export default function AdminDashboard() {
                     type="text"
                     className="input"
                     style={{ marginBottom: 0 }}
-                    placeholder="3鈥�32 characters"
+                    placeholder="3閳ワ拷32 characters"
                     maxLength={32}
                     value={newUser.username}
                     onChange={e => setNewUser(u => ({ ...u, username: e.target.value }))}
@@ -499,7 +506,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.createUser}
               >
                 {actionLoading.createUser
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating鈥�</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating閳ワ拷</>
                   : 'Create User'
                 }
               </button>
@@ -520,7 +527,7 @@ export default function AdminDashboard() {
                     onChange={e => setCreditForm(f => ({ ...f, userId: e.target.value }))}
                     required
                   >
-                    <option value="">Select user鈥�</option>
+                    <option value="">Select user閳ワ拷</option>
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.username} (${Number(u.credits || 0).toFixed(2)})
@@ -582,7 +589,7 @@ export default function AdminDashboard() {
                   type="search"
                   className="input"
                   style={{ width: 180, marginBottom: 0 }}
-                  placeholder="Search username鈥�"
+                  placeholder="Search username閳ワ拷"
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   aria-label="Search users"
@@ -622,7 +629,7 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <span className={`badge ${u.is_banned ? 'badge-danger' : 'badge-success'}`}>
-                          {u.is_banned ? '鈼� Banned' : '鈼� Active'}
+                          {u.is_banned ? '閳硷拷 Banned' : '閳硷拷 Active'}
                         </span>
                       </td>
                       <td>
@@ -659,7 +666,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 PRODUCTS 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 PRODUCTS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'products' && (
         <div>
           {errors.products && <SectionError message={errors.products} onRetry={fetchAll} />}
@@ -694,7 +701,7 @@ export default function AdminDashboard() {
                     type="url"
                     className="input"
                     style={{ marginBottom: 0 }}
-                    placeholder="https://i.imgur.com/鈥� (leave blank for default icon)"
+                    placeholder="https://i.imgur.com/閳ワ拷 (leave blank for default icon)"
                     value={newProduct.image_url}
                     onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))}
                   />
@@ -774,7 +781,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.createProduct}
               >
                 {actionLoading.createProduct
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating鈥�</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating閳ワ拷</>
                   : 'Create Product'
                 }
               </button>
@@ -804,13 +811,13 @@ export default function AdminDashboard() {
                       <td><strong>{p.name}</strong></td>
                       <td>
                         <span className="badge badge-muted" style={{ fontSize: 11 }}>
-                          {p.key_type === 'license_only' ? '馃攽 License' : '馃懁 User/Pass'}
+                          {p.key_type === 'license_only' ? '棣冩斀 License' : '棣冩噥 User/Pass'}
                         </span>
                       </td>
                       <td>
                         {p.image_url
                           ? <img src={p.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6 }} />
-                          : <span style={{ fontSize: 20 }}>馃摝</span>
+                          : <span style={{ fontSize: 20 }}>棣冩憹</span>
                         }
                       </td>
                       <td>
@@ -839,7 +846,7 @@ export default function AdminDashboard() {
                   ))}
                   {products.length === 0 && (
                     <tr><td colSpan="5">
-                      <div className="empty-state"><div className="empty-state-icon">馃摝</div><p>No products yet</p></div>
+                      <div className="empty-state"><div className="empty-state-icon">棣冩憹</div><p>No products yet</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -849,7 +856,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 KEYS 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 KEYS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'keys' && (
         <div>
           {errors.keys && <SectionError message={errors.keys} onRetry={fetchAll} />}
@@ -868,7 +875,7 @@ export default function AdminDashboard() {
                     onChange={e => setKeyUpload(k => ({ ...k, product_id: e.target.value }))}
                     required
                   >
-                    <option value="">Select product鈥�</option>
+                    <option value="">Select product閳ワ拷</option>
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
@@ -883,7 +890,7 @@ export default function AdminDashboard() {
                     onChange={e => setKeyUpload(k => ({ ...k, days: e.target.value }))}
                     required
                   >
-                    <option value="">Select days鈥�</option>
+                    <option value="">Select days閳ワ拷</option>
                     {[1, 3, 7, 14, 30, 60, 90, 180, 365].map(d => (
                       <option key={d} value={d}>{d} days</option>
                     ))}
@@ -892,7 +899,7 @@ export default function AdminDashboard() {
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="ku-keys">
-                  Keys 鈥� one per line *
+                  Keys 閳ワ拷 one per line *
                   {keyUpload.keys && (
                     <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>
                       ({keyUpload.keys.split('\n').filter(k => k.trim()).length} keys)
@@ -916,7 +923,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.uploadKeys}
               >
                 {actionLoading.uploadKeys
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Uploading鈥�</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Uploading閳ワ拷</>
                   : 'Upload Keys'
                 }
               </button>
@@ -934,7 +941,7 @@ export default function AdminDashboard() {
                   type="search"
                   className="input"
                   style={{ width: 160, marginBottom: 0 }}
-                  placeholder="Search keys鈥�"
+                  placeholder="Search keys閳ワ拷"
                   value={keySearch}
                   onChange={e => setKeySearch(e.target.value)}
                   aria-label="Search keys"
@@ -962,17 +969,17 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <span className={`badge ${k.is_used ? 'badge-danger' : 'badge-success'}`}>
-                          {k.is_used ? '鈼� Used' : '鈼� Available'}
+                          {k.is_used ? '閳硷拷 Used' : '閳硷拷 Available'}
                         </span>
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {k.used_by || '鈥�'}
+                        {k.used_by || '閳ワ拷'}
                       </td>
                     </tr>
                   ))}
                   {filteredKeys.length === 0 && (
                     <tr><td colSpan="5">
-                      <div className="empty-state"><div className="empty-state-icon">馃攽</div><p>{keySearch ? 'No keys match your search' : 'No keys uploaded yet'}</p></div>
+                      <div className="empty-state"><div className="empty-state-icon">棣冩斀</div><p>{keySearch ? 'No keys match your search' : 'No keys uploaded yet'}</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -987,14 +994,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 PAYMENTS 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 PAYMENTS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'payments' && (
         <div>
           {errors.payments && <SectionError message={errors.payments} onRetry={fetchAll} />}
 
           {pendingPayments.length > 0 && (
             <div className="alert alert-warning" style={{ marginBottom: 16 }}>
-              鈴� {pendingPayments.length} payment{pendingPayments.length > 1 ? 's' : ''} awaiting approval
+              閳达拷 {pendingPayments.length} payment{pendingPayments.length > 1 ? 's' : ''} awaiting approval
             </div>
           )}
 
@@ -1032,8 +1039,8 @@ export default function AdminDashboard() {
                       <td>
                         <code style={{ fontSize: 10.5 }}>
                           {p.tx_id
-                            ? p.tx_id.slice(0, 24) + (p.tx_id.length > 24 ? '鈥�' : '')
-                            : '鈥�'
+                            ? p.tx_id.slice(0, 24) + (p.tx_id.length > 24 ? '閳ワ拷' : '')
+                            : '閳ワ拷'
                           }
                         </code>
                       </td>
@@ -1048,26 +1055,39 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         {p.status === 'pending' ? (
-                          <button
-                            className="btn btn-sm btn-success"
-                            onClick={() => handleApprovePayment(p.id, p.amount, p.username)}
-                            disabled={actionLoading.approve}
-                            aria-label={`Approve $${p.amount} for ${p.username}`}
-                          >
-                            {actionLoading.approve
-                              ? <span className="spinner spinner-sm" aria-hidden="true" />
-                              : 'Approve'
-                            }
-                          </button>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              className="btn btn-sm btn-success"
+                              onClick={() => handleApprovePayment(p.id, p.amount, p.username)}
+                              disabled={actionLoading.approve}
+                              aria-label={`Approve $${p.amount} for ${p.username}`}
+                            >
+                              {actionLoading.approve
+                                ? <span className="spinner spinner-sm" aria-hidden="true" />
+                                : 'Approve'
+                              }
+                            </button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleRejectPayment(p.id, p.amount, p.username)}
+                              disabled={actionLoading.reject}
+                              aria-label={`Reject $${p.amount} for ${p.username}`}
+                            >
+                              {actionLoading.reject
+                                ? <span className="spinner spinner-sm" aria-hidden="true" />
+                                : 'Reject'
+                              }
+                            </button>
+                          </div>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>鈥�</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>閳ワ拷</span>
                         )}
                       </td>
                     </tr>
                   ))}
                   {payments.length === 0 && (
                     <tr><td colSpan="6">
-                      <div className="empty-state"><div className="empty-state-icon">馃挸</div><p>No payments yet</p></div>
+                      <div className="empty-state"><div className="empty-state-icon">棣冩尭</div><p>No payments yet</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -1077,7 +1097,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 LICENSES 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 LICENSES 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'licenses' && (
         <div>
           {errors.licenses && <SectionError message={errors.licenses} onRetry={fetchAll} />}
@@ -1090,7 +1110,7 @@ export default function AdminDashboard() {
                   type="search"
                   className="input"
                   style={{ width: 180, marginBottom: 0 }}
-                  placeholder="Search鈥�"
+                  placeholder="Search閳ワ拷"
                   value={licSearch}
                   onChange={e => setLicSearch(e.target.value)}
                   aria-label="Search licenses"
@@ -1124,7 +1144,7 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <span className={`badge ${active ? 'badge-success' : 'badge-danger'}`}>
-                            {active ? '鈼� Active' : '鈼� Expired'}
+                            {active ? '閳硷拷 Active' : '閳硷拷 Expired'}
                           </span>
                         </td>
                       </tr>
@@ -1132,7 +1152,7 @@ export default function AdminDashboard() {
                   })}
                   {filteredLicenses.length === 0 && (
                     <tr><td colSpan="6">
-                      <div className="empty-state"><div className="empty-state-icon">馃搵</div><p>{licSearch ? 'No results' : 'No licenses yet'}</p></div>
+                      <div className="empty-state"><div className="empty-state-icon">棣冩惖</div><p>{licSearch ? 'No results' : 'No licenses yet'}</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -1142,7 +1162,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 NOTIFICATIONS 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 */}
+      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 NOTIFICATIONS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
       {activeTab === 'notifications' && (
         <div style={{ maxWidth: 600 }}>
           <div className="card">
@@ -1167,7 +1187,7 @@ export default function AdminDashboard() {
                   id="notif-msg"
                   className="textarea"
                   rows={4}
-                  placeholder="Write your notification message here鈥�"
+                  placeholder="Write your notification message here閳ワ拷"
                   maxLength={500}
                   value={notifForm.message}
                   onChange={e => setNotifForm(f => ({ ...f, message: e.target.value }))}
@@ -1190,8 +1210,8 @@ export default function AdminDashboard() {
                     target_user: '',
                   }))}
                 >
-                  <option value="global">馃寪 All users (broadcast)</option>
-                  <option value="specific">馃懁 Specific user</option>
+                  <option value="global">棣冨 All users (broadcast)</option>
+                  <option value="specific">棣冩噥 Specific user</option>
                 </select>
               </div>
               {!notifForm.is_global && (
@@ -1204,7 +1224,7 @@ export default function AdminDashboard() {
                     onChange={e => setNotifForm(f => ({ ...f, target_user: e.target.value }))}
                     required
                   >
-                    <option value="">Choose a user鈥�</option>
+                    <option value="">Choose a user閳ワ拷</option>
                     {users.map(u => (
                       <option key={u.id} value={u.username}>{u.username}</option>
                     ))}
@@ -1218,7 +1238,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.notif}
               >
                 {actionLoading.notif
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Sending鈥�</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Sending閳ワ拷</>
                   : `Send to ${notifForm.is_global ? 'all users' : 'user'}`
                 }
               </button>
