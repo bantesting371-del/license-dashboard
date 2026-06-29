@@ -648,8 +648,10 @@ export default function AdminDashboard() {
                         ${Number(u.total_recharged || 0).toFixed(2)}
                       </td>
                       <td>
-                        <span className={`badge ${u.is_banned ? 'badge-danger' : 'badge-success'}`}>
-                          {u.is_banned ? '● Banned' : '● Active'}
+                        <span className={`badge ${u.is_banned ? 'badge-danger' : 'badge-success'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {u.is_banned 
+                            ? <><span style={{ display: 'flex', width: 8, height: 8, borderRadius: '50%', backgroundColor: 'currentColor' }} /> Banned</> 
+                            : <><span style={{ display: 'flex', width: 8, height: 8, borderRadius: '50%', backgroundColor: 'currentColor' }} /> Active</>}
                         </span>
                       </td>
                       <td>
