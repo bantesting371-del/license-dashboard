@@ -228,8 +228,8 @@ async function initDatabase() {
         console.log(`✅ Admin user '${ADMIN_USERNAME}' created from environment variables`);
       } else {
         await db.execute({
-          sql: 'UPDATE users SET password = ?, role = "admin" WHERE username = ?',
-          args: [hashed, ADMIN_USERNAME]
+          sql: 'UPDATE users SET password = ?, role = ? WHERE username = ?',
+          args: [hashed, 'admin', ADMIN_USERNAME]
         });
         console.log(`✅ Admin user '${ADMIN_USERNAME}' credentials updated from environment variables`);
       }
