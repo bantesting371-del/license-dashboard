@@ -126,6 +126,18 @@ async function initDatabase() {
     `);
 
     await db.execute(`
+      CREATE TABLE IF NOT EXISTS hwid_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        license_id INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        resolved_at DATETIME,
+        FOREIGN KEY (license_id) REFERENCES licenses(id)
+      )
+    `);
+
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
@@ -667,11 +679,65 @@ app.post('/api/licenses/:id/reset', authenticate, async (req, res) => {
     });
     if (license.rows.length === 0) return res.status(404).json({ error: 'License not found' });
 
-    await db.execute({
-      sql: 'UPDATE licenses SET hwid = NULL, last_reset = datetime(\'now\') WHERE id = ?',
+    // Check if there is already a pending request
+    const pending = await db.execute({
+      sql: 'SELECT * FROM hwid_requests WHERE license_id = ? AND status = "pending"',
       args: [req.params.id]
     });
-    res.json({ message: 'HWID reset successful' });
+    if (pending.rows.length > 0) return res.status(400).json({ error: 'Reset request already pending approval' });
+
+    await db.execute({
+      sql: 'INSERT INTO hwid_requests (license_id, username) VALUES (?, ?)',
+      args: [req.params.id, req.user.username]
+    });
+
+    res.json({ message: 'HWID reset requested successfully. Waiting for admin approval.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin HWID requests
+app.get('/api/admin/hwid-requests', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.execute('SELECT r.*, l.key as license_key FROM hwid_requests r JOIN licenses l ON r.license_id = l.id ORDER BY r.created_at DESC');
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/hwid-requests/:id/approve', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const request = await db.execute({
+      sql: 'SELECT * FROM hwid_requests WHERE id = ?',
+      args: [req.params.id]
+    });
+    if (request.rows.length === 0) return res.status(404).json({ error: 'Request not found' });
+
+    await db.execute({
+      sql: 'UPDATE licenses SET hwid = NULL, last_reset = datetime(\'now\') WHERE id = ?',
+      args: [request.rows[0].license_id]
+    });
+
+    await db.execute({
+      sql: 'UPDATE hwid_requests SET status = "completed", resolved_at = datetime(\'now\') WHERE id = ?',
+      args: [req.params.id]
+    });
+
+    res.json({ message: 'HWID reset approved' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/hwid-requests/:id/reject', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await db.execute({
+      sql: 'UPDATE hwid_requests SET status = "rejected", resolved_at = datetime(\'now\') WHERE id = ?',
+      args: [req.params.id]
+    });
+    res.json({ message: 'HWID reset rejected' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -899,13 +965,14 @@ app.get('/api/stats/top-resellers', authenticate, async (req, res) => {
 
 app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
   try {
-    const [users, revenue, keysSold, activeLic, products, pending] = await Promise.all([
+    const [users, revenue, keysSold, activeLic, products, pending, pendingHwid] = await Promise.all([
       db.execute("SELECT COUNT(*) as c FROM users WHERE COALESCE(role,'user') != 'admin'"),
       db.execute('SELECT SUM(total_recharged) as t FROM users'),
       db.execute('SELECT COUNT(*) as c FROM licenses'),
       db.execute('SELECT COUNT(*) as c FROM licenses WHERE status = \'active\' AND expiry_date > datetime(\'now\')'),
       db.execute('SELECT COUNT(*) as c FROM products'),
-      db.execute('SELECT COUNT(*) as c FROM payments WHERE status = \'pending\'')
+      db.execute('SELECT COUNT(*) as c FROM payments WHERE status = \'pending\''),
+      db.execute('SELECT COUNT(*) as c FROM hwid_requests WHERE status = \'pending\'')
     ]);
 
     res.json({
@@ -914,7 +981,8 @@ app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
       totalKeysSold: keysSold.rows[0].c,
       activeLicenses: activeLic.rows[0].c,
       totalProducts: products.rows[0].c,
-      pendingPayments: pending.rows[0].c
+      pendingPayments: pending.rows[0].c,
+      pendingHwidResets: pendingHwid.rows[0].c
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
