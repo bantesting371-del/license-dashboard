@@ -103,11 +103,11 @@ export default function Licenses() {
   const handleReset = async (id, productName) => {
     setResetting(r => ({ ...r, [id]: true }));
     try {
-      await api.post(`/api/licenses/${id}/reset`);
-      showToast(`HWID reset for "${productName}" — you can now log in from a new device.`);
+      const res = await api.post(`/api/licenses/${id}/reset`);
+      showToast(res.data.message || `HWID reset requested for "${productName}".`);
       await fetchLicenses();
     } catch (e) {
-      showToast(e.response?.data?.error || 'Reset failed. Try again.', 'danger');
+      showToast(e.response?.data?.error || 'Reset request failed. Try again.', 'danger');
     } finally {
       setResetting(r => ({ ...r, [id]: false }));
     }
