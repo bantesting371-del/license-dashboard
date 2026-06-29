@@ -58,10 +58,7 @@ export default function Navbar() {
     { to: '/',          label: 'Dashboard', icon: NAV_ICONS.dashboard },
     { to: '/products',  label: 'Products',  icon: NAV_ICONS.products },
     { to: '/licenses',  label: 'Licenses',  icon: NAV_ICONS.licenses },
-    { to: '/payments',  label: 'Payments',  icon: NAV_ICONS.payments },
-    ...(user.role === 'admin'
-      ? [{ to: '/admin', label: 'Admin', icon: NAV_ICONS.admin, admin: true }]
-      : []),
+    { to: '/payments',  label: 'Payments',  icon: NAV_ICONS.payments }
   ] : [];
 
   return (
