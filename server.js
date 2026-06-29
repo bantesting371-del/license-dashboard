@@ -163,6 +163,46 @@ async function initDatabase() {
       )
     `);
 
+    // ---- Safe migrations for existing databases ----
+    // Each ALTER TABLE is wrapped individually so one failure never blocks the rest.
+    // LibSQL (Turso) throws if a column already exists — we catch and ignore those.
+    const migrations = [
+      `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`,
+      `ALTER TABLE users ADD COLUMN credits REAL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN total_recharged REAL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
+      `ALTER TABLE products ADD COLUMN image_url TEXT`,
+      `ALTER TABLE products ADD COLUMN custom_key_pattern TEXT`,
+      `ALTER TABLE products ADD COLUMN is_active INTEGER DEFAULT 1`,
+      `ALTER TABLE products ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
+      `ALTER TABLE key_pool ADD COLUMN used_by TEXT`,
+      `ALTER TABLE key_pool ADD COLUMN used_at DATETIME`,
+      `ALTER TABLE key_pool ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
+      `ALTER TABLE licenses ADD COLUMN product_name TEXT`,
+      `ALTER TABLE licenses ADD COLUMN total_credits REAL`,
+      `ALTER TABLE licenses ADD COLUMN hwid TEXT`,
+      `ALTER TABLE licenses ADD COLUMN last_reset DATETIME`,
+      `ALTER TABLE licenses ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
+      `ALTER TABLE payments ADD COLUMN payment_method TEXT DEFAULT 'binance'`,
+      `ALTER TABLE payments ADD COLUMN tx_id TEXT`,
+      `ALTER TABLE payments ADD COLUMN credits_added REAL`,
+      `ALTER TABLE payments ADD COLUMN approved_date DATETIME`,
+      `ALTER TABLE payments ADD COLUMN approved_by TEXT`,
+      `ALTER TABLE notifications ADD COLUMN target_user TEXT`,
+      `ALTER TABLE notifications ADD COLUMN created_by TEXT`,
+      `ALTER TABLE notifications ADD COLUMN read_by TEXT DEFAULT '[]'`,
+    ];
+    for (const sql of migrations) {
+      try { await db.execute(sql); }
+      catch (e) {
+        // "duplicate column" errors are expected and safe to ignore
+        if (!e.message?.includes('duplicate column') && !e.message?.includes('already exists')) {
+          console.warn('Migration skipped:', e.message?.slice(0, 80));
+        }
+      }
+    }
+
     const kt = await db.execute('SELECT * FROM key_types');
     if (kt.rows.length === 0) {
       await db.execute(`
@@ -373,7 +413,7 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 
 app.get('/api/admin/users', authenticate, requireAdmin, async (req, res) => {
   try {
-    const result = await db.execute('SELECT id, username, role, credits, total_recharged, is_banned, created_at FROM users WHERE role != "admin" ORDER BY created_at DESC');
+    const result = await db.execute("SELECT id, username, role, credits, total_recharged, is_banned, created_at FROM users WHERE COALESCE(role,'user') != 'admin' ORDER BY created_at DESC");
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -843,7 +883,7 @@ app.get('/api/stats/top-resellers', authenticate, async (req, res) => {
 app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
   try {
     const [users, revenue, keysSold, activeLic, products, pending] = await Promise.all([
-      db.execute('SELECT COUNT(*) as c FROM users WHERE role != "admin"'),
+      db.execute("SELECT COUNT(*) as c FROM users WHERE COALESCE(role,'user') != 'admin'"),
       db.execute('SELECT SUM(total_recharged) as t FROM users'),
       db.execute('SELECT COUNT(*) as c FROM licenses'),
       db.execute('SELECT COUNT(*) as c FROM licenses WHERE status = "active" AND expiry_date > datetime("now")'),
@@ -874,5 +914,5 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
