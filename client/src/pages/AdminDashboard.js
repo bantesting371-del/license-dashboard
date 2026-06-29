@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../context/AuthContext';
 
-// 閳光偓閳光偓閳光偓 Admin Dashboard 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  Admin Dashboard 
 // Full admin panel with tabbed navigation.
-// Tabs: Stats 璺� Users 璺� Products 璺� Keys 璺� Payments 璺� Licenses 璺� Notifications
+// Tabs: Stats  Users  Products  Keys  Payments  Licenses  Notifications
 //
 // Key fixes vs previous version:
-//  閳ワ拷 fetchAll uses Promise.allSettled so ONE failing endpoint never blocks the rest
-//  閳ワ拷 Each data slice has its own error state 閳ワ拷 shown inline per section
-//  閳ワ拷 Product image_url is truly optional (not validated, not required)
-//  閳ワ拷 Product create sends days_config as JSON string if backend expects it
-//  閳ワ拷 Key upload supports multi-line paste, trims blank lines
-//  閳ワ拷 Payment approve with confirmation dialog
-//  閳ワ拷 Admin register uses /api/auth/register (admin-only route)
-//  閳ワ拷 All destructive actions require window.confirm
-//  閳ワ拷 Toast is fixed-position bottom-right, auto-dismisses
-// 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  ... fetchAll uses Promise.allSettled so ONE failing endpoint never blocks the rest
+//  ... Each data slice has its own error state ... shown inline per section
+//  ... Product image_url is truly optional (not validated, not required)
+//  ... Product create sends days_config as JSON string if backend expects it
+//  ... Key upload supports multi-line paste, trims blank lines
+//  ... Payment approve with confirmation dialog
+//  ... Admin register uses /api/auth/register (admin-only route)
+//  ... All destructive actions require window.confirm
+//  ... Toast is fixed-position bottom-right, auto-dismisses
+// 
 
-// 閳光偓閳光偓 Toast 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  Toast 
 function Toast({ toast }) {
   if (!toast || !toast.msg) return null;
   return (
@@ -30,17 +30,17 @@ function Toast({ toast }) {
         maxWidth: 380, boxShadow: 'var(--shadow-lg)', margin: 0,
       }}
     >
-      <span aria-hidden="true">{toast.type === 'success' ? '閴侊拷' : '閳跨媴绗�'}</span>
+      <span aria-hidden="true">{toast.type === 'success' ? '✅' : '⚠️'}</span>
       <span>{toast.msg}</span>
     </div>
   );
 }
 
-// 閳光偓閳光偓 SectionError 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  SectionError 
 function SectionError({ message, onRetry }) {
   return (
     <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <span>閳跨媴绗� {message}</span>
+      <span> {message}</span>
       {onRetry && (
         <button className="btn btn-sm btn-ghost" onClick={onRetry}>
           Retry
@@ -50,19 +50,19 @@ function SectionError({ message, onRetry }) {
   );
 }
 
-// 閳光偓閳光偓 StatCard 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  StatCard 
 function StatCard({ icon, label, value, color, sub }) {
   return (
     <div className="stat-card" style={{ gap: 6 }}>
       <div className="stat-icon" style={{ background: `${color}1a`, fontSize: 20 }}>{icon}</div>
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ color }}>{value ?? '閳ワ拷'}</div>
+      <div className="stat-value" style={{ color }}>{value ?? '...'}</div>
       {sub && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
 
-// 閳光偓閳光偓 DayRow 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  DayRow 
 function DayRow({ config, index, onChange, onRemove }) {
   const DAY_OPTIONS = [1, 3, 7, 14, 30, 60, 90, 180, 365];
   return (
@@ -98,15 +98,15 @@ function DayRow({ config, index, onChange, onRemove }) {
         onClick={() => onRemove(index)}
         aria-label={`Remove ${config.days}-day option`}
       >
-        閴侊拷
+        
       </button>
     </div>
   );
 }
 
-// 閳光偓閳光偓 Main Component 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+//  Main Component 
 export default function AdminDashboard() {
-  // 閳光偓閳光偓 state 閳光偓閳光偓
+  //  state 
   const [activeTab, setActiveTab] = useState('stats');
   const [toast,     setToast]     = useState({ msg: '', type: 'success' });
 
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
 
   const toastTimer = useRef(null);
 
-  // 閳光偓閳光偓 helpers 閳光偓閳光偓
+  //  helpers 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type });
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
   const setActionBusy = (key, val) =>
     setActionLoading(prev => ({ ...prev, [key]: val }));
 
-  // 閳光偓閳光偓 fetch 閳光偓閳光偓
+  //  fetch 
   const fetchAll = useCallback(async () => {
     setGlobalLoading(true);
     const endpoints = [
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // 閳光偓閳光偓 guard wrapper 閳光偓閳光偓
+  //  guard wrapper 
   const guard = (key, fn) => async (...args) => {
     setActionBusy(key, true);
     try {
@@ -209,14 +209,14 @@ export default function AdminDashboard() {
     }
   };
 
-  // 閳光偓閳光偓 handlers 閳光偓閳光偓
+  //  handlers 
   const handleCreateUser = guard('createUser', async (e) => {
     e.preventDefault();
     const u = newUser.username.trim().slice(0, 64);
     const p = newUser.password.slice(0, 128);
     if (!u || !p) { showToast('Username and password are required.', 'danger'); return; }
     if (!/^[a-zA-Z0-9_-]{3,32}$/.test(u)) {
-      showToast('Username: 3閳ワ拷32 chars, letters/numbers/_ or -.', 'danger'); return;
+      showToast('Username: 3...32 chars, letters/numbers/_ or -.', 'danger'); return;
     }
     if (p.length < 6) { showToast('Password must be at least 6 characters.', 'danger'); return; }
     await api.post('/api/auth/register', { username: u, password: p, role: newUser.role });
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
       key_type:            newProduct.key_type,
       custom_key_pattern:  newProduct.custom_key_pattern.trim(),
       days_config:         newProduct.days_config,
-      // image_url is fully optional 閳ワ拷 only include if non-empty
+      // image_url is fully optional ... only include if non-empty
       ...(newProduct.image_url.trim()
         ? { image_url: newProduct.image_url.trim() }
         : {}),
@@ -347,7 +347,7 @@ export default function AdminDashboard() {
   const removeDayOption = (i) =>
     setNewProduct(p => ({ ...p, days_config: p.days_config.filter((_, j) => j !== i) }));
 
-  // 閳光偓閳光偓 derived 閳光偓閳光偓
+  //  derived 
   const now              = new Date();
   const pendingPayments  = payments.filter(p => p.status === 'pending');
   const filteredUsers    = users.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase()));
@@ -361,28 +361,28 @@ export default function AdminDashboard() {
     l.product_name?.toLowerCase().includes(licSearch.toLowerCase())
   );
 
-  // 閳光偓閳光偓 tabs config 閳光偓閳光偓
+  //  tabs config 
   const TABS = [
-    { id: 'stats',         label: 'Stats',         icon: '棣冩惓' },
-    { id: 'users',         label: 'Users',          icon: '棣冩噧',  badge: null },
-    { id: 'products',      label: 'Products',       icon: '棣冩憹' },
-    { id: 'keys',          label: 'Keys',           icon: '棣冩斀' },
-    { id: 'payments',      label: 'Payments',       icon: '棣冩尭',  badge: pendingPayments.length },
-    { id: 'licenses',      label: 'Licenses',       icon: '棣冩惖' },
-    { id: 'notifications', label: 'Notify',         icon: '棣冩晜' },
+    { id: 'stats',         label: 'Stats',         icon: '📊' },
+    { id: 'users',         label: 'Users',          icon: '👥',  badge: null },
+    { id: 'products',      label: 'Products',       icon: '📦' },
+    { id: 'keys',          label: 'Keys',           icon: '🔑' },
+    { id: 'payments',      label: 'Payments',       icon: '💵',  badge: pendingPayments.length },
+    { id: 'licenses',      label: 'Licenses',       icon: '📜' },
+    { id: 'notifications', label: 'Notify',         icon: '🔔' },
   ];
 
-  // 閳光偓閳光偓 loading screen 閳光偓閳光偓
+  //  loading screen 
   if (globalLoading) {
     return (
       <div className="page-loader" role="status">
         <div className="spinner" aria-hidden="true" />
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading admin data閳ワ拷</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading admin data...</span>
       </div>
     );
   }
 
-  // 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
+  // 
   return (
     <div>
       <Toast toast={toast} />
@@ -400,11 +400,11 @@ export default function AdminDashboard() {
           onClick={fetchAll}
           aria-label="Refresh all data"
         >
-          棣冩敡 Refresh
+           Refresh
         </button>
       </div>
 
-      {/* 閳光偓閳光偓 tab bar 閳光偓閳光偓 */}
+      {/*  tab bar  */}
       <div className="tabs admin-tabs" role="tablist" aria-label="Admin sections">
         {TABS.map(t => (
           <button
@@ -426,24 +426,24 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 STATS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  STATS  */}
       {activeTab === 'stats' && (
         <div>
           {errors.stats && <SectionError message={errors.stats} onRetry={fetchAll} />}
           <div className="grid-stats">
-            <StatCard icon="棣冩噧" label="Total Users"      value={stats.totalUsers}    color="var(--brand-light)" />
-            <StatCard icon="棣冩尩" label="Total Revenue"    value={stats.totalRevenue != null ? `$${Number(stats.totalRevenue).toFixed(2)}` : '閳ワ拷'} color="var(--success)" />
-            <StatCard icon="棣冩斀" label="Keys Sold"        value={stats.totalKeysSold} color="var(--info)" />
-            <StatCard icon="閴侊拷" label="Active Licenses"  value={stats.activeLicenses} color="var(--warning)" />
-            <StatCard icon="棣冩憹" label="Products"         value={stats.totalProducts} color="var(--brand-light)" />
-            <StatCard icon="閳达拷" label="Pending Payments" value={stats.pendingPayments} color="var(--danger)"
+            <StatCard icon="👥" label="Total Users"      value={stats.totalUsers}    color="var(--brand-light)" />
+            <StatCard icon="💰" label="Total Revenue"    value={stats.totalRevenue != null ? `$${Number(stats.totalRevenue).toFixed(2)}` : '...'} color="var(--success)" />
+            <StatCard icon="🔑" label="Keys Sold"        value={stats.totalKeysSold} color="var(--info)" />
+            <StatCard icon="✅" label="Active Licenses"  value={stats.activeLicenses} color="var(--warning)" />
+            <StatCard icon="📦" label="Products"         value={stats.totalProducts} color="var(--brand-light)" />
+            <StatCard icon="🛎️" label="Pending Payments" value={stats.pendingPayments} color="var(--danger)"
               sub={stats.pendingPayments > 0 ? 'Action required' : undefined}
             />
           </div>
         </div>
       )}
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 USERS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  USERS  */}
       {activeTab === 'users' && (
         <div>
           {errors.users && <SectionError message={errors.users} onRetry={fetchAll} />}
@@ -460,7 +460,7 @@ export default function AdminDashboard() {
                     type="text"
                     className="input"
                     style={{ marginBottom: 0 }}
-                    placeholder="3閳ワ拷32 characters"
+                    placeholder="3...32 characters"
                     maxLength={32}
                     value={newUser.username}
                     onChange={e => setNewUser(u => ({ ...u, username: e.target.value }))}
@@ -506,7 +506,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.createUser}
               >
                 {actionLoading.createUser
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating閳ワ拷</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating...</>
                   : 'Create User'
                 }
               </button>
@@ -527,7 +527,7 @@ export default function AdminDashboard() {
                     onChange={e => setCreditForm(f => ({ ...f, userId: e.target.value }))}
                     required
                   >
-                    <option value="">Select user閳ワ拷</option>
+                    <option value="">Select user...</option>
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.username} (${Number(u.credits || 0).toFixed(2)})
@@ -589,7 +589,7 @@ export default function AdminDashboard() {
                   type="search"
                   className="input"
                   style={{ width: 180, marginBottom: 0 }}
-                  placeholder="Search username閳ワ拷"
+                  placeholder="Search username..."
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   aria-label="Search users"
@@ -629,7 +629,7 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <span className={`badge ${u.is_banned ? 'badge-danger' : 'badge-success'}`}>
-                          {u.is_banned ? '閳硷拷 Banned' : '閳硷拷 Active'}
+                          {u.is_banned ? '● Banned' : '● Active'}
                         </span>
                       </td>
                       <td>
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 PRODUCTS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  PRODUCTS  */}
       {activeTab === 'products' && (
         <div>
           {errors.products && <SectionError message={errors.products} onRetry={fetchAll} />}
@@ -701,7 +701,7 @@ export default function AdminDashboard() {
                     type="url"
                     className="input"
                     style={{ marginBottom: 0 }}
-                    placeholder="https://i.imgur.com/閳ワ拷 (leave blank for default icon)"
+                    placeholder="https://i.imgur.com/... (leave blank for default icon)"
                     value={newProduct.image_url}
                     onChange={e => setNewProduct(p => ({ ...p, image_url: e.target.value }))}
                   />
@@ -781,7 +781,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.createProduct}
               >
                 {actionLoading.createProduct
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating閳ワ拷</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating...</>
                   : 'Create Product'
                 }
               </button>
@@ -811,13 +811,13 @@ export default function AdminDashboard() {
                       <td><strong>{p.name}</strong></td>
                       <td>
                         <span className="badge badge-muted" style={{ fontSize: 11 }}>
-                          {p.key_type === 'license_only' ? '棣冩斀 License' : '棣冩噥 User/Pass'}
+                          {p.key_type === 'license_only' ? '🔑 License' : '👤 User/Pass'}
                         </span>
                       </td>
                       <td>
                         {p.image_url
                           ? <img src={p.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6 }} />
-                          : <span style={{ fontSize: 20 }}>棣冩憹</span>
+                          : <span style={{ fontSize: 20 }}></span>
                         }
                       </td>
                       <td>
@@ -846,7 +846,7 @@ export default function AdminDashboard() {
                   ))}
                   {products.length === 0 && (
                     <tr><td colSpan="5">
-                      <div className="empty-state"><div className="empty-state-icon">棣冩憹</div><p>No products yet</p></div>
+                      <div className="empty-state"><div className="empty-state-icon">📦</div><p>No products yet</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -856,7 +856,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 KEYS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  KEYS  */}
       {activeTab === 'keys' && (
         <div>
           {errors.keys && <SectionError message={errors.keys} onRetry={fetchAll} />}
@@ -875,7 +875,7 @@ export default function AdminDashboard() {
                     onChange={e => setKeyUpload(k => ({ ...k, product_id: e.target.value }))}
                     required
                   >
-                    <option value="">Select product閳ワ拷</option>
+                    <option value="">Select product...</option>
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
@@ -890,7 +890,7 @@ export default function AdminDashboard() {
                     onChange={e => setKeyUpload(k => ({ ...k, days: e.target.value }))}
                     required
                   >
-                    <option value="">Select days閳ワ拷</option>
+                    <option value="">Select days...</option>
                     {[1, 3, 7, 14, 30, 60, 90, 180, 365].map(d => (
                       <option key={d} value={d}>{d} days</option>
                     ))}
@@ -899,7 +899,7 @@ export default function AdminDashboard() {
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="ku-keys">
-                  Keys 閳ワ拷 one per line *
+                  Keys ... one per line *
                   {keyUpload.keys && (
                     <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>
                       ({keyUpload.keys.split('\n').filter(k => k.trim()).length} keys)
@@ -923,7 +923,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.uploadKeys}
               >
                 {actionLoading.uploadKeys
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Uploading閳ワ拷</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Uploading...</>
                   : 'Upload Keys'
                 }
               </button>
@@ -941,7 +941,7 @@ export default function AdminDashboard() {
                   type="search"
                   className="input"
                   style={{ width: 160, marginBottom: 0 }}
-                  placeholder="Search keys閳ワ拷"
+                  placeholder="Search keys..."
                   value={keySearch}
                   onChange={e => setKeySearch(e.target.value)}
                   aria-label="Search keys"
@@ -969,17 +969,17 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <span className={`badge ${k.is_used ? 'badge-danger' : 'badge-success'}`}>
-                          {k.is_used ? '閳硷拷 Used' : '閳硷拷 Available'}
+                          {k.is_used ? ' Used' : ' Available'}
                         </span>
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {k.used_by || '閳ワ拷'}
+                        {k.used_by || '...'}
                       </td>
                     </tr>
                   ))}
                   {filteredKeys.length === 0 && (
                     <tr><td colSpan="5">
-                      <div className="empty-state"><div className="empty-state-icon">棣冩斀</div><p>{keySearch ? 'No keys match your search' : 'No keys uploaded yet'}</p></div>
+                      <div className="empty-state"><div className="empty-state-icon"></div><p>{keySearch ? 'No keys match your search' : 'No keys uploaded yet'}</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -994,14 +994,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 PAYMENTS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  PAYMENTS  */}
       {activeTab === 'payments' && (
         <div>
           {errors.payments && <SectionError message={errors.payments} onRetry={fetchAll} />}
 
           {pendingPayments.length > 0 && (
             <div className="alert alert-warning" style={{ marginBottom: 16 }}>
-              閳达拷 {pendingPayments.length} payment{pendingPayments.length > 1 ? 's' : ''} awaiting approval
+               {pendingPayments.length} payment{pendingPayments.length > 1 ? 's' : ''} awaiting approval
             </div>
           )}
 
@@ -1039,8 +1039,8 @@ export default function AdminDashboard() {
                       <td>
                         <code style={{ fontSize: 10.5 }}>
                           {p.tx_id
-                            ? p.tx_id.slice(0, 24) + (p.tx_id.length > 24 ? '閳ワ拷' : '')
-                            : '閳ワ拷'
+                            ? p.tx_id.slice(0, 24) + (p.tx_id.length > 24 ? '...' : '')
+                            : '...'
                           }
                         </code>
                       </td>
@@ -1080,14 +1080,14 @@ export default function AdminDashboard() {
                             </button>
                           </div>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>閳ワ拷</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>...</span>
                         )}
                       </td>
                     </tr>
                   ))}
                   {payments.length === 0 && (
                     <tr><td colSpan="6">
-                      <div className="empty-state"><div className="empty-state-icon">棣冩尭</div><p>No payments yet</p></div>
+                      <div className="empty-state"><div className="empty-state-icon"></div><p>No payments yet</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -1097,7 +1097,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 LICENSES 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  LICENSES  */}
       {activeTab === 'licenses' && (
         <div>
           {errors.licenses && <SectionError message={errors.licenses} onRetry={fetchAll} />}
@@ -1110,7 +1110,7 @@ export default function AdminDashboard() {
                   type="search"
                   className="input"
                   style={{ width: 180, marginBottom: 0 }}
-                  placeholder="Search閳ワ拷"
+                  placeholder="Search..."
                   value={licSearch}
                   onChange={e => setLicSearch(e.target.value)}
                   aria-label="Search licenses"
@@ -1144,7 +1144,7 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <span className={`badge ${active ? 'badge-success' : 'badge-danger'}`}>
-                            {active ? '閳硷拷 Active' : '閳硷拷 Expired'}
+                            {active ? ' Active' : ' Expired'}
                           </span>
                         </td>
                       </tr>
@@ -1152,7 +1152,7 @@ export default function AdminDashboard() {
                   })}
                   {filteredLicenses.length === 0 && (
                     <tr><td colSpan="6">
-                      <div className="empty-state"><div className="empty-state-icon">棣冩惖</div><p>{licSearch ? 'No results' : 'No licenses yet'}</p></div>
+                      <div className="empty-state"><div className="empty-state-icon"></div><p>{licSearch ? 'No results' : 'No licenses yet'}</p></div>
                     </td></tr>
                   )}
                 </tbody>
@@ -1162,7 +1162,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 NOTIFICATIONS 閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜閳烘劏鏅查埡鎰ㄦ櫜 */}
+      {/*  NOTIFICATIONS  */}
       {activeTab === 'notifications' && (
         <div style={{ maxWidth: 600 }}>
           <div className="card">
@@ -1187,7 +1187,7 @@ export default function AdminDashboard() {
                   id="notif-msg"
                   className="textarea"
                   rows={4}
-                  placeholder="Write your notification message here閳ワ拷"
+                  placeholder="Write your notification message here..."
                   maxLength={500}
                   value={notifForm.message}
                   onChange={e => setNotifForm(f => ({ ...f, message: e.target.value }))}
@@ -1210,8 +1210,8 @@ export default function AdminDashboard() {
                     target_user: '',
                   }))}
                 >
-                  <option value="global">棣冨 All users (broadcast)</option>
-                  <option value="specific">棣冩噥 Specific user</option>
+                  <option value="global"> All users (broadcast)</option>
+                  <option value="specific"> Specific user</option>
                 </select>
               </div>
               {!notifForm.is_global && (
@@ -1224,7 +1224,7 @@ export default function AdminDashboard() {
                     onChange={e => setNotifForm(f => ({ ...f, target_user: e.target.value }))}
                     required
                   >
-                    <option value="">Choose a user閳ワ拷</option>
+                    <option value="">Choose a user...</option>
                     {users.map(u => (
                       <option key={u.id} value={u.username}>{u.username}</option>
                     ))}
@@ -1238,7 +1238,7 @@ export default function AdminDashboard() {
                 aria-busy={actionLoading.notif}
               >
                 {actionLoading.notif
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Sending閳ワ拷</>
+                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Sending...</>
                   : `Send to ${notifForm.is_global ? 'all users' : 'user'}`
                 }
               </button>
