@@ -815,6 +815,23 @@ app.put('/api/admin/payments/:id/approve', authenticate, requireAdmin, async (re
   }
 });
 
+app.put('/api/admin/payments/:id/reject', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const payment = await db.execute({ sql: 'SELECT * FROM payments WHERE id = ?', args: [id] });
+    if (payment.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
+
+    await db.execute({
+      sql: 'UPDATE payments SET status = ?, approved_date = datetime("now"), approved_by = ? WHERE id = ?',
+      args: ['failed', req.user.username, id]
+    });
+
+    res.json({ message: 'Payment rejected manually' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== NOTIFICATIONS ====================
 
 app.get('/api/notifications', authenticate, async (req, res) => {
