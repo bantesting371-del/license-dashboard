@@ -154,6 +154,8 @@ export default function AdminDashboard() {
     name: '', image_url: '', key_type: 'license_only',
     custom_key_pattern: '', days_config: [],
   });
+  const [editingProductId, setEditingProductId] = useState(null);
+
   const [keyUpload, setKeyUpload] = useState({
     product_id: '', days: '', keys: '',
   });
@@ -275,7 +277,7 @@ export default function AdminDashboard() {
     showToast('Credits updated successfully.');
   });
 
-  const handleCreateProduct = guard('createProduct', async (e) => {
+  const handleSaveProduct = guard('saveProduct', async (e) => {
     e.preventDefault();
     const name = newProduct.name.trim().slice(0, 128);
     if (!name) { showToast('Product name is required.', 'danger'); return; }
@@ -288,23 +290,51 @@ export default function AdminDashboard() {
       key_type:            newProduct.key_type,
       custom_key_pattern:  newProduct.custom_key_pattern.trim(),
       days_config:         newProduct.days_config,
-      // image_url is fully optional ... only include if non-empty
-      ...(newProduct.image_url.trim()
-        ? { image_url: newProduct.image_url.trim() }
-        : {}),
+      ...(newProduct.image_url.trim() ? { image_url: newProduct.image_url.trim() } : {}),
     };
 
-    await api.post('/api/admin/products', payload);
+    if (editingProductId) {
+      await api.put(`/api/admin/products/${editingProductId}`, payload);
+      showToast(`Product "${name}" updated.`);
+    } else {
+      await api.post('/api/admin/products', payload);
+      showToast(`Product "${name}" created.`);
+    }
+
     setNewProduct({ name: '', image_url: '', key_type: 'license_only', custom_key_pattern: '', days_config: [] });
+    setEditingProductId(null);
     await fetchAll();
-    showToast(`Product "${name}" created.`);
   });
+
+  const handleEditProductClick = (p) => {
+    setEditingProductId(p.id);
+    setNewProduct({
+      name: p.name || '',
+      image_url: p.image_url || '',
+      key_type: p.key_type || 'license_only',
+      custom_key_pattern: p.custom_key_pattern || '',
+      days_config: p.available_days || [],
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEditProduct = () => {
+    setEditingProductId(null);
+    setNewProduct({ name: '', image_url: '', key_type: 'license_only', custom_key_pattern: '', days_config: [] });
+  };
 
   const handleDeleteProduct = guard('deleteProduct', async (id, name) => {
     if (!window.confirm(`Delete product "${name}"?\nThis will also remove all associated keys.`)) return;
     await api.delete(`/api/admin/products/${id}`);
     await fetchAll();
     showToast(`Product "${name}" deleted.`);
+  });
+
+  const handleDeleteKey = guard('deleteKey', async (id) => {
+    if (!window.confirm('Delete this key?')) return;
+    await api.delete(`/api/admin/keys/${id}`);
+    await fetchAll();
+    showToast('Key deleted.');
   });
 
   const handleUploadKeys = guard('uploadKeys', async (e) => {
@@ -714,10 +744,10 @@ export default function AdminDashboard() {
         <div>
           {errors.products && <SectionError message={errors.products} onRetry={fetchAll} />}
 
-          {/* Create product form */}
+          {/* Create/Edit product form */}
           <div className="card">
-            <h2 className="section-title">Add New Product</h2>
-            <form onSubmit={handleCreateProduct} noValidate>
+            <h2 className="section-title">{editingProductId ? 'Edit Product' : 'Add New Product'}</h2>
+            <form onSubmit={handleSaveProduct} noValidate>
 
               <div className="admin-form-grid-2" style={{ marginBottom: 14 }}>
                 <div className="form-group" style={{ margin: 0 }}>
@@ -817,17 +847,28 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={actionLoading.createProduct}
-                aria-busy={actionLoading.createProduct}
-              >
-                {actionLoading.createProduct
-                  ? <><span className="spinner spinner-sm" aria-hidden="true" /> Creating...</>
-                  : 'Create Product'
-                }
-              </button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={actionLoading.saveProduct}
+                  aria-busy={actionLoading.saveProduct}
+                >
+                  {actionLoading.saveProduct
+                    ? <><span className="spinner spinner-sm" aria-hidden="true" /> {editingProductId ? 'Saving...' : 'Creating...'}</>
+                    : (editingProductId ? 'Save Changes' : 'Create Product')
+                  }
+                </button>
+                {editingProductId && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={cancelEditProduct}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -880,14 +921,23 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDeleteProduct(p.id, p.name)}
-                          disabled={actionLoading.deleteProduct}
-                          aria-label={`Delete ${p.name}`}
-                        >
-                          Delete
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            className="btn btn-sm btn-ghost"
+                            onClick={() => handleEditProductClick(p)}
+                            aria-label={`Edit ${p.name}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleDeleteProduct(p.id, p.name)}
+                            disabled={actionLoading.deleteProduct}
+                            aria-label={`Delete ${p.name}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1004,6 +1054,7 @@ export default function AdminDashboard() {
                     <th>Key Value</th>
                     <th>Status</th>
                     <th>Used By</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1022,10 +1073,20 @@ export default function AdminDashboard() {
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                         {k.used_by || '...'}
                       </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDeleteKey(k.id)}
+                          disabled={actionLoading.deleteKey}
+                          aria-label="Delete Key"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {filteredKeys.length === 0 && (
-                    <tr><td colSpan="5">
+                    <tr><td colSpan="6">
                       <div className="empty-state"><div className="empty-state-icon" style={{ width: 48, height: 48, margin: '0 auto', color: 'var(--text-muted)' }}>{ICONS.keys}</div><p>{keySearch ? 'No keys match your search' : 'No keys uploaded yet'}</p></div>
                     </td></tr>
                   )}
