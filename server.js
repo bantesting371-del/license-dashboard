@@ -275,8 +275,13 @@ const requireAdmin = (req, res, next) => {
 // ==================== BINANCE API VERIFICATION ====================
 async function verifyBinanceDeposit(txId, expectedAmount) {
   try {
+    if (!process.env.BINANCE_API_KEY || !process.env.BINANCE_SECRET_KEY) {
+      console.error('Binance API keys are missing in environment variables.');
+      return { valid: false, message: 'Payment gateway configuration error. Admin must set Binance API keys.' };
+    }
+
     const timestamp = Date.now();
-    const queryString = `coin=USDT&timestamp=${timestamp}`;
+    const queryString = `coin=USDT&recvWindow=60000&timestamp=${timestamp}`;
     const signature = crypto
       .createHmac('sha256', process.env.BINANCE_SECRET_KEY)
       .update(queryString)
@@ -298,13 +303,13 @@ async function verifyBinanceDeposit(txId, expectedAmount) {
       return { valid: false, message: 'Transaction pending. Please wait for network confirmation.' };
     }
     if (parseFloat(deposit.amount) < parseFloat(expectedAmount)) {
-      return { valid: false, message: `Amount mismatch. Expected $${expectedAmount}, found $${deposit.amount}` };
+      return { valid: false, message: `Amount mismatch. Expected ${expectedAmount}, found ${deposit.amount}` };
     }
     
     return { valid: true, amount: deposit.amount, status: deposit.status };
   } catch (error) {
     console.error('Binance API Error:', error.response?.data || error.message);
-    return { valid: false, message: 'Binance API error. Please try again later.' };
+    return { valid: false, message: error.response?.data?.msg || 'Binance API error. Please try again later.' };
   }
 }
 
@@ -761,6 +766,11 @@ app.get('/api/admin/licenses', authenticate, requireAdmin, async (req, res) => {
 app.post('/api/payments/create', authenticate, async (req, res) => {
   try {
     const { amount } = req.body;
+    
+    if (!process.env.BINANCE_DEPOSIT_ADDRESS) {
+      return res.status(500).json({ error: 'Payment gateway configuration error. Admin must set Binance Deposit Address.' });
+    }
+
     const orderId = `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await db.execute({
