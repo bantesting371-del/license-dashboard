@@ -295,18 +295,22 @@ export default function Licenses() {
 
                       {/* HWID reset */}
                       <td>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => handleReset(l.id, l.product_name)}
-                          disabled={resetting[l.id] || !active}
-                          title={!active ? 'Cannot reset an expired license' : 'Reset HWID'}
-                          aria-label={`Reset HWID for ${l.product_name}`}
-                        >
-                          {resetting[l.id]
-                            ? <><span className="spinner spinner-sm" aria-hidden="true" /> …</>
-                            : 'Reset'
-                          }
-                        </button>
+                        {l.hwid_pending === 1 ? (
+                          <span className="badge badge-warning" style={{ fontSize: 11 }}>Pending</span>
+                        ) : (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => handleReset(l.id, l.product_name)}
+                            disabled={resetting[l.id] || !active}
+                            title={!active ? 'Cannot reset an expired license' : 'Reset HWID'}
+                            aria-label={`Reset HWID for ${l.product_name}`}
+                          >
+                            {resetting[l.id]
+                              ? <><span className="spinner spinner-sm" aria-hidden="true" /> …</>
+                              : 'Reset'
+                            }
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
