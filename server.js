@@ -303,7 +303,7 @@ async function verifyBinanceDeposit(txId, expectedAmount) {
       return { valid: false, message: 'Transaction pending. Please wait for network confirmation.' };
     }
     if (parseFloat(deposit.amount) < parseFloat(expectedAmount)) {
-      return { valid: false, message: `Amount mismatch. Expected ${expectedAmount}, found ${deposit.amount}` };
+      return { valid: false, message: `Amount mismatch. Expected $${expectedAmount}, found $${deposit.amount}` };
     }
     
     return { valid: true, amount: deposit.amount, status: deposit.status };
@@ -543,6 +543,31 @@ app.put('/api/admin/products/:id', authenticate, requireAdmin, async (req, res) 
   }
 });
 
+app.put('/api/admin/products/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { name, image_url, key_type, custom_key_pattern, days_config } = req.body;
+    
+    await db.execute({
+      sql: 'UPDATE products SET name = ?, image_url = ?, key_type = ?, custom_key_pattern = ? WHERE id = ?',
+      args: [name, image_url || '', key_type || 'random', custom_key_pattern || '', req.params.id]
+    });
+
+    if (days_config && Array.isArray(days_config)) {
+      await db.execute({ sql: 'DELETE FROM product_days WHERE product_id = ?', args: [req.params.id] });
+      for (const cfg of days_config) {
+        await db.execute({
+          sql: 'INSERT INTO product_days (product_id, days, price) VALUES (?, ?, ?)',
+          args: [req.params.id, cfg.days, cfg.price]
+        });
+      }
+    }
+
+    res.json({ message: 'Product updated' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/admin/products/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -609,6 +634,15 @@ app.get('/api/admin/keys', authenticate, requireAdmin, async (req, res) => {
       ORDER BY k.created_at DESC
     `);
     res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/admin/keys/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await db.execute({ sql: 'DELETE FROM key_pool WHERE id = ?', args: [req.params.id] });
+    res.json({ message: 'Key deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
