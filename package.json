@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "License Dashboard - Single Deploy",
   "main": "server.js",
+  "private": true,
+  "workspaces": [
+    "client"
+  ],
   "scripts": {
     "start": "node server.js",
-    "build": "cd client && npm install && npx react-scripts build",
+    "build": "npm run build --workspace=client",
     "dev": "nodemon server.js"
   },
   "dependencies": {
