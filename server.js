@@ -281,7 +281,7 @@ async function fetchBinanceDepositAddress() {
   }
 
   const timestamp = Date.now();
-  const queryString = `coin=USDT&network=TRX&recvWindow=60000&timestamp=${timestamp}`;
+  const queryString = `coin=USDT&network=BSC&recvWindow=60000&timestamp=${timestamp}`;
   const signature = crypto
     .createHmac('sha256', process.env.BINANCE_SECRET_KEY)
     .update(queryString)
