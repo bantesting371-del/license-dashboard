@@ -38,6 +38,41 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          // Token expired or invalid
+          clearToken();
+          setUser(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          // Token expired or invalid
+          clearToken();
+          setUser(null);
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
+  useEffect(() => {
     const token = sessionStorage.getItem('token');
     if (token) {
       try {
