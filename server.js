@@ -275,6 +275,33 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+async function fetchBinanceDepositAddress() {
+  if (!process.env.BINANCE_API_KEY || !process.env.BINANCE_SECRET_KEY) {
+    throw new Error('Payment gateway configuration error. Admin must set Binance API keys.');
+  }
+
+  const timestamp = Date.now();
+  const queryString = `coin=USDT&network=TRX&recvWindow=60000&timestamp=${timestamp}`;
+  const signature = crypto
+    .createHmac('sha256', process.env.BINANCE_SECRET_KEY)
+    .update(queryString)
+    .digest('hex');
+
+  const { data } = await axios.get(
+    `https://api.binance.com/sapi/v1/capital/deposit/address?${queryString}&signature=${signature}`,
+    {
+      headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY },
+      timeout: 15000
+    }
+  );
+
+  if (!data.address) {
+    throw new Error('Could not fetch deposit address from Binance API');
+  }
+
+  return data.address;
+}
+
 // ==================== BINANCE API VERIFICATION ====================
 async function verifyBinanceDeposit(txId, expectedAmount) {
   try {
@@ -804,9 +831,8 @@ app.post('/api/payments/create', authenticate, async (req, res) => {
   try {
     const { amount } = req.body;
     
-    if (!process.env.BINANCE_DEPOSIT_ADDRESS) {
-      return res.status(500).json({ error: 'Payment gateway configuration error. Admin must set Binance Deposit Address.' });
-    }
+    // Fetch live deposit address from Binance
+    const binanceAddress = await fetchBinanceDepositAddress();
 
     const orderId = `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -818,7 +844,7 @@ app.post('/api/payments/create', authenticate, async (req, res) => {
     res.json({
       orderId,
       amount,
-      binanceAddress: process.env.BINANCE_DEPOSIT_ADDRESS,
+      binanceAddress: binanceAddress,
       status: 'pending',
       message: 'Send USDT to the Binance address, then submit your Transaction ID below.'
     });
