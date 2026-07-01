@@ -769,7 +769,7 @@ app.post('/api/licenses/:id/reset', authenticate, async (req, res) => {
 
     // Check if there is already a pending request
     const pending = await db.execute({
-      sql: 'SELECT * FROM hwid_requests WHERE license_id = ? AND status = "pending"',
+      sql: 'SELECT * FROM hwid_requests WHERE license_id = ? AND status = \'pending\'',
       args: [req.params.id]
     });
     if (pending.rows.length > 0) return res.status(400).json({ error: 'Reset request already pending approval' });
@@ -809,7 +809,7 @@ app.post('/api/admin/hwid-requests/:id/approve', authenticate, requireAdmin, asy
     });
 
     await db.execute({
-      sql: 'UPDATE hwid_requests SET status = "completed", resolved_at = datetime(\'now\') WHERE id = ?',
+      sql: 'UPDATE hwid_requests SET status = \'completed\', resolved_at = datetime(\'now\') WHERE id = ?',
       args: [req.params.id]
     });
 
@@ -822,7 +822,7 @@ app.post('/api/admin/hwid-requests/:id/approve', authenticate, requireAdmin, asy
 app.post('/api/admin/hwid-requests/:id/reject', authenticate, requireAdmin, async (req, res) => {
   try {
     await db.execute({
-      sql: 'UPDATE hwid_requests SET status = "rejected", resolved_at = datetime(\'now\') WHERE id = ?',
+      sql: 'UPDATE hwid_requests SET status = \'rejected\', resolved_at = datetime(\'now\') WHERE id = ?',
       args: [req.params.id]
     });
     res.json({ message: 'HWID reset rejected' });
@@ -846,7 +846,7 @@ app.post('/api/payments/create', authenticate, async (req, res) => {
   try {
     // Check for existing active order
     const result = await db.execute({
-      sql: 'SELECT * FROM payments WHERE username = ? AND status = "pending" ORDER BY date DESC LIMIT 1',
+      sql: 'SELECT * FROM payments WHERE username = ? AND status = \'pending\' ORDER BY date DESC LIMIT 1',
       args: [req.user.username]
     });
     
@@ -860,7 +860,7 @@ app.post('/api/payments/create', authenticate, async (req, res) => {
       } else {
         // Expire it
         await db.execute({
-          sql: 'UPDATE payments SET status = "expired" WHERE id = ?',
+          sql: 'UPDATE payments SET status = \'expired\' WHERE id = ?',
           args: [order.id]
         });
       }
@@ -954,7 +954,7 @@ app.post('/api/payments/verify', rateLimit(20, 60000), authenticate, async (req,
 app.get('/api/payments/active', authenticate, async (req, res) => {
   try {
     const result = await db.execute({
-      sql: 'SELECT * FROM payments WHERE username = ? AND status = "pending" ORDER BY date DESC LIMIT 1',
+      sql: 'SELECT * FROM payments WHERE username = ? AND status = \'pending\' ORDER BY date DESC LIMIT 1',
       args: [req.user.username]
     });
     
@@ -970,7 +970,7 @@ app.get('/api/payments/active', authenticate, async (req, res) => {
     if (diffMins > 5) {
       // Mark as expired
       await db.execute({
-        sql: 'UPDATE payments SET status = "expired" WHERE id = ?',
+        sql: 'UPDATE payments SET status = \'expired\' WHERE id = ?',
         args: [order.id]
       });
       return res.json({ activeOrder: null });
