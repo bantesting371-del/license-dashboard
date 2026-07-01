@@ -15,13 +15,13 @@ export function AuthProvider({ children }) {
       // Validate basic JWT shape before storing
       const parts = token.split('.');
       if (parts.length !== 3) throw new Error('Invalid token format');
-      localStorage.setItem('token', token);
+      sessionStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
   };
 
   const clearToken = () => {
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
   };
 
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       try {
         const parts = token.split('.');
@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
 
   // Auto-expiry: decode exp from JWT payload (no lib needed)
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
