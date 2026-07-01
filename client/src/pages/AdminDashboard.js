@@ -84,7 +84,7 @@ function StatCard({ icon, label, value, color, sub }) {
 
 //  DayRow 
 function DayRow({ config, index, onChange, onRemove }) {
-  const DAY_OPTIONS = [1, 3, 7, 14, 30, 60, 90, 180, 365];
+  const DAY_OPTIONS = [1, 3, 7, 15, 30, 60, 90, 180, 365];
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
       <select
@@ -988,7 +988,7 @@ export default function AdminDashboard() {
                     required
                   >
                     <option value="">Select days...</option>
-                    {[1, 3, 7, 14, 30, 60, 90, 180, 365].map(d => (
+                    {[1, 3, 7, 15, 30, 60, 90, 180, 365].map(d => (
                       <option key={d} value={d}>{d} days</option>
                     ))}
                   </select>
