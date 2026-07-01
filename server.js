@@ -250,7 +250,8 @@ async function initDatabase() {
       }
     }
 
-    console.log('✅ Database initialized');
+    await db.execute('UPDATE products SET is_active = 1');
+  console.log('✅ Database initialized and products fixed');
   } catch (error) {
     console.error('DB Init Error:', error);
   }
@@ -336,8 +337,11 @@ async function verifyBinanceDeposit(txId, expectedAmount) {
       );
       data = response.data;
     } catch (error) {
+      if (error.response && error.response.status === 451) {
+        return { valid: 'manual', message: 'Binance API restricted in server region. Admin manual approval required.' };
+      }
       if (error.response && error.response.data) {
-        return { valid: false, message: `Binance API Error: ${error.response.data.msg || JSON.stringify(error.response.data)}` };
+        return { valid: false, message: `Binance API Error: ${error.response.data.msg || error.message}` };
       }
       throw error;
     }
@@ -887,7 +891,7 @@ app.post('/api/payments/verify', rateLimit(20, 60000), authenticate, async (req,
 
     // Validate TXID format to prevent injection / garbage input
     const cleanTxId = String(txId).trim();
-    if (!/^[a-fA-F0-9]{20,80}$/.test(cleanTxId)) {
+    if (!/^[a-fA-F0-9]{8,100}$/.test(cleanTxId)) {
       return res.status(400).json({ error: 'Invalid Transaction ID format. Copy it directly from Binance.' });
     }
 
@@ -914,6 +918,17 @@ app.post('/api/payments/verify', rateLimit(20, 60000), authenticate, async (req,
     // Verify with Binance API
     const expectedAmount = payment.rows[0].amount;
     const verification = await verifyBinanceDeposit(cleanTxId, expectedAmount);
+
+    if (verification.valid === 'manual') {
+      await db.execute({
+        sql: 'UPDATE payments SET tx_id = ? WHERE order_id = ?',
+        args: [cleanTxId, orderId]
+      });
+      return res.status(202).json({ 
+        message: 'Transaction recorded. Network restricted Binance API so manual admin approval is required. Please check back later or contact admin.',
+        requiresManual: true
+      });
+    }
 
     if (!verification.valid) {
       return res.status(400).json({ error: verification.message });
