@@ -579,19 +579,6 @@ app.post('/api/admin/products', authenticate, requireAdmin, async (req, res) => 
 
 app.put('/api/admin/products/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { name, image_url, key_type, custom_key_pattern, is_active } = req.body;
-    await db.execute({
-      sql: 'UPDATE products SET name = ?, image_url = ?, key_type = ?, custom_key_pattern = ?, is_active = ? WHERE id = ?',
-      args: [name, image_url, key_type, custom_key_pattern, is_active ? 1 : 0, req.params.id]
-    });
-    res.json({ message: 'Product updated' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.put('/api/admin/products/:id', authenticate, requireAdmin, async (req, res) => {
-  try {
     const { name, image_url, key_type, custom_key_pattern, days_config } = req.body;
     
     await db.execute({
