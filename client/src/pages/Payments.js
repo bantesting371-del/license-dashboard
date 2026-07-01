@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, api } from '../context/AuthContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 // ─── Payments page ────────────────────────────────────────────────────────────
 // Two-step deposit flow:
@@ -211,6 +212,11 @@ export default function Payments() {
             {/* deposit address */}
             <div className="form-group">
               <label className="form-label">Deposit Address</label>
+              
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', padding: '16px', background: '#fff', borderRadius: '8px', width: 'fit-content', margin: '0 auto 16px' }}>
+                <QRCodeSVG value={activeOrder.binanceAddress} size={150} />
+              </div>
+
               <div className="address-box">
                 <code className="address-value">{activeOrder.binanceAddress}</code>
                 <button
