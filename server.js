@@ -277,6 +277,7 @@ const requireAdmin = (req, res, next) => {
 
 async function fetchBinanceDepositAddress() {
   if (!process.env.BINANCE_API_KEY || !process.env.BINANCE_SECRET_KEY) {
+    if (process.env.BINANCE_DEPOSIT_ADDRESS) return process.env.BINANCE_DEPOSIT_ADDRESS;
     throw new Error('Payment gateway configuration error. Admin must set Binance API keys.');
   }
 
@@ -287,19 +288,28 @@ async function fetchBinanceDepositAddress() {
     .update(queryString)
     .digest('hex');
 
-  const { data } = await axios.get(
-    `https://api.binance.com/sapi/v1/capital/deposit/address?${queryString}&signature=${signature}`,
-    {
-      headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY },
-      timeout: 15000
+  try {
+    const { data } = await axios.get(
+      `https://api.binance.com/sapi/v1/capital/deposit/address?${queryString}&signature=${signature}`,
+      {
+        headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY },
+        timeout: 15000
+      }
+    );
+
+    if (!data.address) {
+      if (process.env.BINANCE_DEPOSIT_ADDRESS) return process.env.BINANCE_DEPOSIT_ADDRESS;
+      throw new Error('Could not fetch deposit address from Binance API');
     }
-  );
 
-  if (!data.address) {
-    throw new Error('Could not fetch deposit address from Binance API');
+    return data.address;
+  } catch (error) {
+    if (process.env.BINANCE_DEPOSIT_ADDRESS) return process.env.BINANCE_DEPOSIT_ADDRESS;
+    if (error.response && error.response.data) {
+      throw new Error(`Binance API Error: ${error.response.data.msg || JSON.stringify(error.response.data)}`);
+    }
+    throw error;
   }
-
-  return data.address;
 }
 
 // ==================== BINANCE API VERIFICATION ====================
@@ -317,13 +327,22 @@ async function verifyBinanceDeposit(txId, expectedAmount) {
       .update(queryString)
       .digest('hex');
 
-    const { data } = await axios.get(
-      `https://api.binance.com/sapi/v1/capital/deposit/hisrec?${queryString}&signature=${signature}`,
-      {
-        headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY },
-        timeout: 15000
+    let data;
+    try {
+      const response = await axios.get(
+        `https://api.binance.com/sapi/v1/capital/deposit/hisrec?${queryString}&signature=${signature}`,
+        {
+          headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY },
+          timeout: 15000
+        }
+      );
+      data = response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return { valid: false, message: `Binance API Error: ${error.response.data.msg || JSON.stringify(error.response.data)}` };
       }
-    );
+      throw error;
+    }
 
     const deposit = data.find(d => d.txId === txId);
     if (!deposit) {
