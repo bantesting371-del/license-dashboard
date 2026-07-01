@@ -124,7 +124,7 @@ export default function Payments() {
     e.preventDefault();
     const tx = txId.trim();
     if (!tx) { showToast('Paste your Transaction ID.', 'danger'); return; }
-    if (!/^[a-fA-F0-9]{20,80}$/.test(tx)) {
+    if (!/^[a-zA-Z0-9-]{8,100}$/.test(tx)) {
       showToast('Invalid TXID format. Copy it directly from Binance.', 'danger');
       return;
     }
