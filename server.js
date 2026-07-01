@@ -298,13 +298,15 @@ async function fetchBinanceDepositAddress() {
     );
 
     if (!data.address) {
-      return process.env.BINANCE_DEPOSIT_ADDRESS || '0x1234567890abcdef1234567890abcdef12345678';
+      if (process.env.BINANCE_DEPOSIT_ADDRESS) return process.env.BINANCE_DEPOSIT_ADDRESS;
+      throw new Error('Binance address not found. Please set BINANCE_DEPOSIT_ADDRESS in Environment Variables.');
     }
 
     return data.address;
   } catch (error) {
     console.error('Binance API fetch address failed:', error.message);
-    return process.env.BINANCE_DEPOSIT_ADDRESS || '0x1234567890abcdef1234567890abcdef12345678';
+    if (process.env.BINANCE_DEPOSIT_ADDRESS) return process.env.BINANCE_DEPOSIT_ADDRESS;
+    throw new Error('Binance API restricted or failed. Please set BINANCE_DEPOSIT_ADDRESS in Environment Variables as a fallback.');
   }
 }
 
@@ -981,7 +983,7 @@ app.get('/api/payments/active', authenticate, async (req, res) => {
     try {
       binanceAddress = await fetchBinanceDepositAddress();
     } catch (e) {
-      // Ignore here
+      binanceAddress = 'Address not configured (Add BINANCE_DEPOSIT_ADDRESS in settings)';
     }
     
     res.json({
