@@ -47,11 +47,22 @@ export default function Payments() {
   const [copied,        setCopied]              = useState(false);
   const [toast,         setToast]               = useState({ msg: '', type: 'success' });
   const [histLoading,   setHistLoading]         = useState(true);
+  const [countdown,     setCountdown]           = useState(0);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type }), 5000);
   };
+
+  const fetchActiveOrder = useCallback(async () => {
+    try {
+      const res = await api.get('/api/payments/active');
+      if (res.data && res.data.activeOrder) {
+        setActiveOrder(res.data.activeOrder);
+        setCountdown(res.data.expiresInSeconds);
+      }
+    } catch { /* silent */ }
+  }, []);
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -61,7 +72,27 @@ export default function Payments() {
     finally { setHistLoading(false); }
   }, []);
 
-  useEffect(() => { fetchPayments(); }, [fetchPayments]);
+  useEffect(() => { 
+    fetchPayments(); 
+    fetchActiveOrder();
+  }, [fetchPayments, fetchActiveOrder]);
+
+  useEffect(() => {
+    let timer;
+    if (activeOrder && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            setActiveOrder(null);
+            fetchPayments();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [activeOrder, countdown, fetchPayments]);
 
   /* Step 1 — create order */
   const handleCreate = async (e) => {
@@ -79,6 +110,7 @@ export default function Payments() {
     try {
       const res = await api.post('/api/payments/create', { amount: val });
       setActiveOrder(res.data);
+      setCountdown(300);
       setAmount('');
     } catch (e) {
       showToast(e.response?.data?.error || 'Failed to create payment. Try again.', 'danger');
@@ -204,9 +236,17 @@ export default function Payments() {
             </p>
 
             {/* amount highlight */}
-            <div className="amount-highlight">
-              <span className="ah-label">Amount to send</span>
-              <span className="ah-value">${activeOrder.amount} USDT</span>
+            <div className="amount-highlight" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span className="ah-label">Amount to send</span>
+                <span className="ah-value">${activeOrder.amount} USDT</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="ah-label">Expires In</span>
+                <span className="ah-value" style={{ color: countdown <= 60 ? 'var(--danger)' : 'var(--warning)', fontSize: '1.25rem' }}>
+                  {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
 
             {/* deposit address */}
