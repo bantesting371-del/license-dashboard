@@ -891,7 +891,7 @@ app.post('/api/payments/verify', rateLimit(20, 60000), authenticate, async (req,
 
     // Validate TXID format to prevent injection / garbage input
     const cleanTxId = String(txId).trim();
-    if (!/^[a-fA-F0-9]{8,100}$/.test(cleanTxId)) {
+    if (!/^[a-zA-Z0-9-]{8,100}$/.test(cleanTxId)) {
       return res.status(400).json({ error: 'Invalid Transaction ID format. Copy it directly from Binance.' });
     }
 
